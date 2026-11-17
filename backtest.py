@@ -57,10 +57,10 @@ LAST_EXIT_SIGNAL_END = time(15, 10)
 
 
 # ---------------------------------------------------------------- data
-def fetch_yf(symbol: str, period: str = "60d") -> pd.DataFrame:
+def fetch_yf(symbol: str, period: str = "60d", interval: str = "5m") -> pd.DataFrame:
     import yfinance as yf
 
-    df = yf.download(symbol, period=period, interval="5m", progress=False,
+    df = yf.download(symbol, period=period, interval=interval, progress=False,
                      auto_adjust=False, multi_level_index=False)
     if df is None or df.empty:
         raise SystemExit(f"yfinance returned no data for {symbol}. "

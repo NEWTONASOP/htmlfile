@@ -1,3 +1,12 @@
+# Intraday strategy backtests (NSE, yfinance)
+
+| Strategy | Script | Timeframe |
+|---|---|---|
+| Neeraj – Kyle Algo + Liquidity Swings | `backtest.py` | 5m |
+| LAXIT – SMA 20 High/Low + MACD | `laxit.py` | 2m |
+
+---
+
 # Neeraj – Kyle Algo + Liquidity Swings Strategy (backtest)
 
 Intraday 5-minute backtest for NSE stocks (default `RELIANCE.NS`, last 1 week = 5 sessions),
@@ -52,3 +61,33 @@ warm-up, so the EMAs and pivots are settled before the backtest week starts.
   left and at least equal to the 14 to its right.
 * "Fully above or below the ribbon" uses a strict comparison of close against the highest or
   lowest of the 15 EMAs.
+
+---
+
+# LAXIT – Intraday Strategy (backtest)
+
+```bash
+python laxit.py                           # RELIANCE.NS 2m, last 5 complete sessions
+python laxit.py --sessions 40 --cost-pct 0.05
+python laxit.py --day 2026-11-13          # print one day's trades
+python laxit.py --one-at-a-time           # no CALL/PUT overlap
+```
+
+Outputs go to `results_laxit/`. No indicator source is needed: SMA and MACD are standard
+TradingView built-ins (`ta.sma`, `ta.macd`).
+
+| Item | Implementation |
+|---|---|
+| Timeframe | 2-minute candles |
+| Indicators | SMA 20 of High, SMA 20 of Low, MACD 12/26/9 on close |
+| CALL setup candle | Green, **more than 50% of its body above SMA 20 High**, and a **bullish MACD crossover** (MACD crossing above its signal line) on this candle or the 2 candles before it, with MACD still above signal |
+| PUT setup candle | Red, more than 50% of its body below SMA 20 Low, and a bearish crossover on this candle or the 2 before it, with MACD still below signal |
+| Entry | **Next candle only**: CALL fills when price breaks above the setup high (at the open if it gaps above it). PUT fills on a break below the setup low |
+| Trading time | Entry candle between 09:45 and 14:20. Trades already open are held until 15:15 |
+| Stop loss | CALL: SMA 20 Low on the setup candle. PUT: SMA 20 High. Fixed until T1 |
+| T1 | 1:1 of the initial risk: book **50%** and move SL to **cost** |
+| Trail | After T1, at each candle close the SL follows SMA 20 Low (CALL) or SMA 20 High (PUT), only ever tightening and never past cost |
+| Exit | SL / cost / trailing SL, otherwise squared off at 15:15 |
+| Same candle hits SL and target | SL counted first (conservative) |
+| CALL vs PUT | Independent trades, one open per side (`--one-at-a-time` allows a single position) |
+| P&L | Per share: 50% at T1 + 50% at the final exit (100% at the SL if T1 was never reached) |
