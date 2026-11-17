@@ -3,7 +3,7 @@
 | Strategy | Script | Timeframe |
 |---|---|---|
 | Neeraj – Kyle Algo + Liquidity Swings | `backtest.py` | 5m |
-| LAXIT – SMA 20 High/Low + MACD | `laxit.py` | 2m |
+| LAXIT – SMA 20 High/Low + MACD | `laxit.py` | 5m (2m with `--interval 2m`) |
 
 ---
 
@@ -67,23 +67,25 @@ warm-up, so the EMAs and pivots are settled before the backtest week starts.
 # LAXIT – Intraday Strategy (backtest)
 
 ```bash
-python laxit.py                           # RELIANCE.NS 2m, last 5 complete sessions
+python laxit.py                           # RELIANCE.NS 5m, last 5 complete sessions
+python laxit.py --interval 2m             # same rules on 2-minute candles
 python laxit.py --sessions 40 --cost-pct 0.05
 python laxit.py --day 2026-11-13          # print one day's trades
 python laxit.py --one-at-a-time           # no CALL/PUT overlap
 ```
 
-Outputs go to `results_laxit/`. No indicator source is needed: SMA and MACD are standard
-TradingView built-ins (`ta.sma`, `ta.macd`).
+Outputs go to `results_laxit/`. MACD follows the TradingView built-in source: EMA 12 − EMA 26
+of close, signal = EMA 9 of MACD (EMAs seeded like Pine's `ta.ema`). A crossover is the
+histogram crossing 0.
 
 | Item | Implementation |
 |---|---|
-| Timeframe | 2-minute candles |
+| Timeframe | 5-minute candles (`--interval 2m` for 2-minute) |
 | Indicators | SMA 20 of High, SMA 20 of Low, MACD 12/26/9 on close |
 | CALL setup candle | Green, **more than 50% of its body above SMA 20 High**, and a **bullish MACD crossover** (MACD crossing above its signal line) on this candle or the 2 candles before it, with MACD still above signal |
 | PUT setup candle | Red, more than 50% of its body below SMA 20 Low, and a bearish crossover on this candle or the 2 before it, with MACD still below signal |
 | Entry | **Next candle only**: CALL fills when price breaks above the setup high (at the open if it gaps above it). PUT fills on a break below the setup low |
-| Trading time | Entry candle between 09:45 and 14:20. Trades already open are held until 15:15 |
+| Trading time | Entry candle between 09:45 and 14:20 (last 5m entry candle 14:15–14:20). Trades already open are held until 15:15 |
 | Stop loss | CALL: SMA 20 Low on the setup candle. PUT: SMA 20 High. Fixed until T1 |
 | T1 | 1:1 of the initial risk: book **50%** and move SL to **cost** |
 | Trail | After T1, at each candle close the SL follows SMA 20 Low (CALL) or SMA 20 High (PUT), only ever tightening and never past cost |

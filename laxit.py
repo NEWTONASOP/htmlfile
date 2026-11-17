@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-LAXIT - intraday strategy backtest (2-minute candles, NSE).
+LAXIT - intraday strategy backtest (5-minute candles by default, NSE).
 
-Indicators : SMA 20 of High, SMA 20 of Low, MACD (12, 26, 9 on close).
+Indicators : SMA 20 of High, SMA 20 of Low, MACD (TradingView built-in: EMA 12 - EMA 26
+             of close, signal = EMA 9 of MACD, crossover = histogram crossing 0).
 CALL setup : green candle, more than 50% of its body above SMA20 High, and a bullish
              MACD crossover on this candle or the 2 before it (MACD still above signal).
 PUT setup  : red candle, more than 50% of its body below SMA20 Low, bearish crossover
@@ -14,7 +15,8 @@ Management : at 1:1 book 50%, move SL to cost, then trail the rest with the SMA 
              (CALL: SMA20 Low, PUT: SMA20 High), never loosening. Forced exit 15:15.
 
 Usage:
-    python laxit.py                        # RELIANCE.NS, last 5 complete sessions
+    python laxit.py                        # RELIANCE.NS 5m, last 5 complete sessions
+    python laxit.py --interval 2m          # same rules on 2-minute candles
     python laxit.py --sessions 40 --cost-pct 0.05
     python laxit.py --one-at-a-time        # no CALL/PUT overlap
     python laxit.py --day 2026-11-13       # print only that day's trades
@@ -38,7 +40,22 @@ BODY_BEYOND = 0.5             # more than 50% of the body beyond the SMA
 ENTRY_START = time(9, 45)     # entry candle may start at 09:45 ...
 ENTRY_END = time(14, 20)      # ... and must end by 14:20
 SQUARE_OFF = time(15, 15)     # forced exit at the close of the candle ending 15:15
-BAR_MIN = 2
+BAR_MIN = 5                   # set from --interval
+
+
+def pine_ema(src: pd.Series, n: int) -> pd.Series:
+    """Pine ta.ema: alpha = 2/(n+1), seeded with the SMA of the first n values."""
+    v = src.to_numpy(float)
+    out = np.full(len(v), np.nan)
+    start = np.flatnonzero(~np.isnan(v))
+    if len(start) == 0 or len(v) - start[0] < n:
+        return pd.Series(out, index=src.index)
+    s0 = start[0]
+    out[s0 + n - 1] = v[s0:s0 + n].mean()
+    a = 2 / (n + 1)
+    for i in range(s0 + n, len(v)):
+        out[i] = a * v[i] + (1 - a) * out[i - 1]
+    return pd.Series(out, index=src.index)
 
 
 # ---------------------------------------------------------------- indicators
@@ -47,8 +64,8 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     o, h, lo, c = df["Open"], df["High"], df["Low"], df["Close"]
     df["sma_h"] = h.rolling(SMA_LEN).mean()
     df["sma_l"] = lo.rolling(SMA_LEN).mean()
-    macd = c.ewm(span=MACD_FAST, adjust=False).mean() - c.ewm(span=MACD_SLOW, adjust=False).mean()
-    sig = macd.ewm(span=MACD_SIGNAL, adjust=False).mean()
+    macd = pine_ema(c, MACD_FAST) - pine_ema(c, MACD_SLOW)
+    sig = pine_ema(macd, MACD_SIGNAL)
     df["macd"], df["macd_sig"] = macd, sig
     above = macd > sig
     bull_x = above & ~above.shift(1, fill_value=True)          # ta.crossover(macd, signal)
@@ -193,7 +210,8 @@ def report(trades: list[Trade], qty: int, cost_pct: float) -> tuple[pd.DataFrame
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--symbol", default="RELIANCE.NS")
-    ap.add_argument("--csv", help="load 2m OHLC from CSV instead of yfinance")
+    ap.add_argument("--interval", default="5m", choices=["5m", "2m"], help="candle timeframe")
+    ap.add_argument("--csv", help="load OHLC from CSV instead of yfinance (same timeframe as --interval)")
     ap.add_argument("--sessions", type=int, default=5)
     ap.add_argument("--include-today", action="store_true")
     ap.add_argument("--one-at-a-time", action="store_true", help="no CALL/PUT overlap")
@@ -203,7 +221,9 @@ def main():
     ap.add_argument("--out", default="results_laxit")
     a = ap.parse_args()
 
-    df = clean(load_csv(a.csv) if a.csv else fetch_yf(a.symbol, interval="2m"))
+    global BAR_MIN
+    BAR_MIN = int(a.interval[:-1])
+    df = clean(load_csv(a.csv) if a.csv else fetch_yf(a.symbol, interval=a.interval))
     sessions = sorted(set(df.index.date))
     if not a.include_today and df.index[-1].time() < SQUARE_OFF:
         sessions = sessions[:-1]
@@ -215,7 +235,7 @@ def main():
     tl, summary = report(trades, a.qty, a.cost_pct)
 
     mode = "one trade at a time" if a.one_at_a_time else "CALL & PUT independent"
-    header = (f"LAXIT ({mode}) | {a.symbol} 2m | {window[0]} -> {window[-1]} ({len(window)} sessions)\n"
+    header = (f"LAXIT ({mode}) | {a.symbol} {a.interval} | {window[0]} -> {window[-1]} ({len(window)} sessions)\n"
               f"SMA{SMA_LEN} High/Low, MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}, crossover within "
               f"{CROSS_LOOKBACK} candles, entries {ENTRY_START:%H:%M}-{ENTRY_END:%H:%M}, "
               f"exit by {SQUARE_OFF:%H:%M}. P&L counts 50% at T1 + 50% at final exit.\n")
