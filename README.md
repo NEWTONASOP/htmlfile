@@ -25,9 +25,10 @@ warm-up, so the EMAs and pivots are settled before the backtest week starts.
 | CALL entry | A candle **closes above every ribbon EMA** and the previous candle did not (fresh cross) → buy at the **next candle's open** |
 | PUT entry | A candle **closes below every ribbon EMA** and the previous candle did not → short at the next candle's open |
 | Opposite signal in a trade | **Reverse** (default): exit at the next open and enter the opposite side at the same price. With `--no-reverse`, opposite signals are ignored while in a trade |
-| CALL exit | Next **confirmed RED (swing-high) Liquidity Swings zone** → exit at the next candle's open |
-| PUT exit | Next **confirmed GREEN (swing-low) zone** → exit at the next candle's open |
-| Zone confirmation | `ta.pivothigh/pivotlow(14, 14)`: the zone appears 14 candles after the pivot candle, which is when Liquidity Swings draws it. Only zones confirmed while the trade is open count |
+| CALL exit | Next **RED (swing-high) Liquidity Swings zone** |
+| PUT exit | Next **GREEN (swing-low) zone** |
+| Exit timing, `--exit-at swing` (default) | Matches manual chart reading: exit at the **close of the swing candle** where the zone box starts, for the first zone whose swing candle is at or after the entry. ⚠️ **Hindsight:** a zone is only known 14 candles after its swing candle, so these exits can't be taken live and the results are overstated |
+| Exit timing, `--exit-at confirm` | Tradable live: exit at the next candle's open after the zone **appears** (14 candles after the swing candle, `ta.pivothigh/pivotlow(14, 14)`) |
 | Stop loss | 1% from entry, checked against each candle's high/low; fills at the stop (or at the open if price gaps through it) |
 | Square-off | Any open position closes at **15:15** (close of the 15:10–15:15 candle) |
 | No new trades | No entry on the candle ending 15:15: the last entry fills at the 15:05 open, so an entry signal candle must close by 15:05. Liquidity-zone exits still act up to the 15:10 open |

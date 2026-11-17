@@ -133,6 +133,10 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     ph, pl = pivots(df["High"].to_numpy(), df["Low"].to_numpy(), L)
     df["red_zone"] = ph     # swing high confirmed -> exit CALL
     df["green_zone"] = pl   # swing low confirmed  -> exit PUT
+    # same pivots flagged on the swing candle itself (where the zone box starts).
+    # Knowing this at the swing candle needs the next L candles -> hindsight.
+    df["red_swing"] = pd.Series(ph, index=df.index).shift(-L, fill_value=False).astype(bool)
+    df["green_swing"] = pd.Series(pl, index=df.index).shift(-L, fill_value=False).astype(bool)
     # zone bounds (Wick Extremity), for reference in the trade log
     o, c, h, lo = (df[k].shift(L) for k in ("Open", "Close", "High", "Low"))
     df["red_top"] = np.where(ph, h, np.nan)
@@ -168,7 +172,10 @@ class Trade:
         return 100 * self.pnl_pts / self.entry
 
 
-def run(df: pd.DataFrame, start_date, reverse: bool = True) -> list[Trade]:
+def run(df: pd.DataFrame, start_date, reverse: bool = True, exit_at: str = "swing") -> list[Trade]:
+    """exit_at="swing":   exit at the close of the zone's swing candle (as read on a
+                          finished chart; uses the next 14 candles = hindsight).
+       exit_at="confirm": exit at the next open after the zone appears live."""
     trades: list[Trade] = []
     pos: Trade | None = None
     pending = None  # dict(exit_reason=str|None, enter=str|None, signal_time, zone_time)
@@ -218,10 +225,19 @@ def run(df: pd.DataFrame, start_date, reverse: bool = True) -> list[Trade]:
         call_sig, put_sig = df["call_sig"].iat[i], df["put_sig"].iat[i]
         if bar_end > LAST_ENTRY_SIGNAL_END:
             call_sig = put_sig = False  # too late for a new trade (or a reversal)
+        if pos is not None and exit_at == "swing":
+            side = pos.side
+            if (side == "CALL" and df["red_swing"].iat[i]) or (side == "PUT" and df["green_swing"].iat[i]):
+                name = "RED" if side == "CALL" else "GREEN"
+                close_pos(ts, c, f"{name} zone (swing candle)", ts)
+                if side == "CALL":
+                    call_sig = False  # don't exit and immediately re-enter the same side
+                else:
+                    put_sig = False
         if pos is not None:
-            if pos.side == "CALL" and df["red_zone"].iat[i]:
+            if exit_at == "confirm" and pos.side == "CALL" and df["red_zone"].iat[i]:
                 exit_reason, zone_time = "RED liquidity zone", df["zone_pivot_time"].iat[i]
-            elif pos.side == "PUT" and df["green_zone"].iat[i]:
+            elif exit_at == "confirm" and pos.side == "PUT" and df["green_zone"].iat[i]:
                 exit_reason, zone_time = "GREEN liquidity zone", df["zone_pivot_time"].iat[i]
             if reverse and pos.side == "CALL" and put_sig:
                 exit_reason = exit_reason or "Reverse (PUT signal)"
@@ -295,6 +311,9 @@ def main():
     ap.add_argument("--include-today", action="store_true", help="include an incomplete current session")
     ap.add_argument("--qty", type=int, default=1, help="shares per trade for Rs P&L")
     ap.add_argument("--cost-pct", type=float, default=0.0, help="round-trip cost in %% of entry")
+    ap.add_argument("--exit-at", choices=["swing", "confirm"], default="swing",
+                    help="swing (default): exit at the zone's swing candle, like reading a "
+                         "finished chart (hindsight). confirm: exit when the zone appears live")
     ap.add_argument("--no-reverse", action="store_true",
                     help="ignore opposite ribbon signals while in a trade "
                          "(exit only on liquidity zone, SL or 15:15)")
@@ -309,10 +328,12 @@ def main():
         df = df[df.index.date <= sessions[-1]]
     window = sessions[-a.sessions:]
     df = add_indicators(df)
-    trades = run(df, window[0], reverse=not a.no_reverse)
+    trades = run(df, window[0], reverse=not a.no_reverse, exit_at=a.exit_at)
     tl, summary = report(trades, a.qty, a.cost_pct)
 
     mode = "hold through opposite signals" if a.no_reverse else "reverse on opposite signal"
+    mode += (", exit at swing candle [hindsight]" if a.exit_at == "swing"
+             else ", exit when zone appears [live]")
     header = (f"Kyle Algo ribbon + Liquidity Swings ({mode}) | {a.symbol} 5m | "
               f"{window[0]} -> {window[-1]} ({len(window)} sessions)\n"
               f"Warm-up history: {sessions[0]} onward ({len(df)} bars). SL {STOP_LOSS_PCT}%, "
