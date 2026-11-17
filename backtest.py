@@ -49,7 +49,11 @@ LS_FILTER_VALUE = 0
 
 STOP_LOSS_PCT = 1.0
 SQUARE_OFF = time(15, 15)        # positions closed at 15:15 (close of 15:10 bar)
-LAST_SIGNAL_BAR_END = time(15, 10)  # a signal candle must close by 15:10
+# No new trade on the candle ending 15:15 -> last entry fills at 15:05 open,
+# so an entry signal candle must close by 15:05. Exit signals are acted on
+# until the candle closing 15:10 (exit at 15:10 open).
+LAST_ENTRY_SIGNAL_END = time(15, 5)
+LAST_EXIT_SIGNAL_END = time(15, 10)
 
 
 # ---------------------------------------------------------------- data
@@ -164,7 +168,7 @@ class Trade:
         return 100 * self.pnl_pts / self.entry
 
 
-def run(df: pd.DataFrame, start_date) -> list[Trade]:
+def run(df: pd.DataFrame, start_date, reverse: bool = True) -> list[Trade]:
     trades: list[Trade] = []
     pos: Trade | None = None
     pending = None  # dict(exit_reason=str|None, enter=str|None, signal_time, zone_time)
@@ -208,19 +212,21 @@ def run(df: pd.DataFrame, start_date) -> list[Trade]:
             close_pos(ts, c, "SquareOff 15:15")
 
         # 4) evaluate signals at this candle's close
-        if not (in_window and df["warm"].iat[i]) or bar_end > LAST_SIGNAL_BAR_END or last_bar_of_day:
+        if not (in_window and df["warm"].iat[i]) or bar_end > LAST_EXIT_SIGNAL_END or last_bar_of_day:
             continue
         exit_reason, zone_time, enter = None, None, None
         call_sig, put_sig = df["call_sig"].iat[i], df["put_sig"].iat[i]
+        if bar_end > LAST_ENTRY_SIGNAL_END:
+            call_sig = put_sig = False  # too late for a new trade (or a reversal)
         if pos is not None:
             if pos.side == "CALL" and df["red_zone"].iat[i]:
                 exit_reason, zone_time = "RED liquidity zone", df["zone_pivot_time"].iat[i]
             elif pos.side == "PUT" and df["green_zone"].iat[i]:
                 exit_reason, zone_time = "GREEN liquidity zone", df["zone_pivot_time"].iat[i]
-            if pos.side == "CALL" and put_sig:
+            if reverse and pos.side == "CALL" and put_sig:
                 exit_reason = exit_reason or "Reverse (PUT signal)"
                 enter = "PUT"
-            elif pos.side == "PUT" and call_sig:
+            elif reverse and pos.side == "PUT" and call_sig:
                 exit_reason = exit_reason or "Reverse (CALL signal)"
                 enter = "CALL"
             elif exit_reason:
@@ -289,6 +295,9 @@ def main():
     ap.add_argument("--include-today", action="store_true", help="include an incomplete current session")
     ap.add_argument("--qty", type=int, default=1, help="shares per trade for Rs P&L")
     ap.add_argument("--cost-pct", type=float, default=0.0, help="round-trip cost in %% of entry")
+    ap.add_argument("--no-reverse", action="store_true",
+                    help="ignore opposite ribbon signals while in a trade "
+                         "(exit only on liquidity zone, SL or 15:15)")
     ap.add_argument("--out", default="results")
     a = ap.parse_args()
 
@@ -300,10 +309,11 @@ def main():
         df = df[df.index.date <= sessions[-1]]
     window = sessions[-a.sessions:]
     df = add_indicators(df)
-    trades = run(df, window[0])
+    trades = run(df, window[0], reverse=not a.no_reverse)
     tl, summary = report(trades, a.qty, a.cost_pct)
 
-    header = (f"Kyle Algo ribbon + Liquidity Swings | {a.symbol} 5m | "
+    mode = "hold through opposite signals" if a.no_reverse else "reverse on opposite signal"
+    header = (f"Kyle Algo ribbon + Liquidity Swings ({mode}) | {a.symbol} 5m | "
               f"{window[0]} -> {window[-1]} ({len(window)} sessions)\n"
               f"Warm-up history: {sessions[0]} onward ({len(df)} bars). SL {STOP_LOSS_PCT}%, "
               f"pivot lookback {LS_PIVOT_LOOKBACK}, square-off {SQUARE_OFF:%H:%M} IST\n")

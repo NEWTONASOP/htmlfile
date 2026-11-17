@@ -24,13 +24,13 @@ warm-up, so the EMAs and pivots are settled before the backtest week starts.
 | Kyle ribbon | 15 EMAs of **high**, lengths 9, 12, …, 51 (as in the indicator source) |
 | CALL entry | A candle **closes above every ribbon EMA** and the previous candle did not (fresh cross) → buy at the **next candle's open** |
 | PUT entry | A candle **closes below every ribbon EMA** and the previous candle did not → short at the next candle's open |
-| Opposite signal in a trade | **Reverse**: exit at the next open and enter the opposite side at the same price |
+| Opposite signal in a trade | **Reverse** (default): exit at the next open and enter the opposite side at the same price. With `--no-reverse`, opposite signals are ignored while in a trade |
 | CALL exit | Next **confirmed RED (swing-high) Liquidity Swings zone** → exit at the next candle's open |
 | PUT exit | Next **confirmed GREEN (swing-low) zone** → exit at the next candle's open |
 | Zone confirmation | `ta.pivothigh/pivotlow(14, 14)`: the zone appears 14 candles after the pivot candle, which is when Liquidity Swings draws it. Only zones confirmed while the trade is open count |
 | Stop loss | 1% from entry, checked against each candle's high/low; fills at the stop (or at the open if price gaps through it) |
 | Square-off | Any open position closes at **15:15** (close of the 15:10–15:15 candle) |
-| No new trades | A signal from the candle ending 15:15 (or later) is ignored. Signal candles must close by 15:10 |
+| No new trades | No entry on the candle ending 15:15: the last entry fills at the 15:05 open, so an entry signal candle must close by 15:05. Liquidity-zone exits still act up to the 15:10 open |
 | Instrument | CALL = long stock, PUT = short stock. P&L is per share on the underlying, before costs unless `--cost-pct` is set |
 | Kyle BUY/SELL labels | Not used |
 
