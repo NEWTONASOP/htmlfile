@@ -203,7 +203,8 @@ class Trade:
         return 100 * self.pnl_pts / self.entry
 
 
-def run(df: pd.DataFrame, start_date, reverse: bool = True, exit_at: str = "swing") -> list[Trade]:
+def run(df: pd.DataFrame, start_date, reverse: bool = True, exit_at: str = "swing",
+        sides: tuple = ("CALL", "PUT")) -> list[Trade]:
     """exit_at="swing":   exit at the close of the zone's swing candle (as read on a
                           finished chart; uses the next 14 candles = hindsight).
        exit_at="confirm": exit at the next open after the zone appears live."""
@@ -253,7 +254,8 @@ def run(df: pd.DataFrame, start_date, reverse: bool = True, exit_at: str = "swin
         if not (in_window and df["warm"].iat[i]) or bar_end > LAST_EXIT_SIGNAL_END or last_bar_of_day:
             continue
         exit_reason, zone_time, enter = None, None, None
-        call_sig, put_sig = df["call_sig"].iat[i], df["put_sig"].iat[i]
+        call_sig = df["call_sig"].iat[i] and "CALL" in sides
+        put_sig = df["put_sig"].iat[i] and "PUT" in sides
         if bar_end > LAST_ENTRY_SIGNAL_END:
             call_sig = put_sig = False  # too late for a new trade (or a reversal)
         if pos is not None and exit_at == "swing":
@@ -356,9 +358,12 @@ def main():
     ap.add_argument("--exit-at", choices=["swing", "confirm"], default="swing",
                     help="swing (default): exit at the zone's swing candle, like reading a "
                          "finished chart (hindsight). confirm: exit when the zone appears live")
-    ap.add_argument("--no-reverse", action="store_true",
-                    help="ignore opposite ribbon signals while in a trade "
-                         "(exit only on liquidity zone, SL or 15:15)")
+    ap.add_argument("--mode", choices=["independent", "reverse", "hold"], default="independent",
+                    help="independent (default): CALL and PUT are separate trades that can be open "
+                         "together, each closed only by its own zone, SL or 15:15. reverse: one "
+                         "position, an opposite signal reverses it. hold: one position, opposite "
+                         "signals ignored until it closes")
+    ap.add_argument("--no-reverse", action="store_true", help="same as --mode hold")
     ap.add_argument("--zones", metavar="YYYY-MM-DD",
                     help="only list the Liquidity Swings zones drawn on that date, then exit")
     ap.add_argument("--out", default="results")
@@ -375,10 +380,18 @@ def main():
     if a.zones:
         list_zones(df, pd.Timestamp(a.zones).date())
         return
-    trades = run(df, window[0], reverse=not a.no_reverse, exit_at=a.exit_at)
+    if a.no_reverse:
+        a.mode = "hold"
+    if a.mode == "independent":
+        trades = (run(df, window[0], reverse=False, exit_at=a.exit_at, sides=("CALL",))
+                  + run(df, window[0], reverse=False, exit_at=a.exit_at, sides=("PUT",)))
+        trades.sort(key=lambda t: (t.entry_time, t.side))
+    else:
+        trades = run(df, window[0], reverse=a.mode == "reverse", exit_at=a.exit_at)
     tl, summary = report(trades, a.qty, a.cost_pct)
 
-    mode = "hold through opposite signals" if a.no_reverse else "reverse on opposite signal"
+    mode = {"independent": "CALL & PUT independent", "reverse": "reverse on opposite signal",
+            "hold": "one trade at a time, hold through opposite signals"}[a.mode]
     mode += (", exit at swing candle [hindsight]" if a.exit_at == "swing"
              else ", exit when zone appears [live]")
     header = (f"Kyle Algo ribbon + Liquidity Swings ({mode}) | {a.symbol} 5m | "

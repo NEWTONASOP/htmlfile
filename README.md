@@ -24,7 +24,8 @@ warm-up, so the EMAs and pivots are settled before the backtest week starts.
 | Kyle ribbon | 15 EMAs of **high**, lengths 9, 12, …, 51 (as in the indicator source) |
 | CALL entry | A candle **closes above every ribbon EMA** and the previous candle did not (fresh cross) → buy at the **next candle's open** |
 | PUT entry | A candle **closes below every ribbon EMA** and the previous candle did not → short at the next candle's open |
-| Opposite signal in a trade | **Reverse** (default): exit at the next open and enter the opposite side at the same price. With `--no-reverse`, opposite signals are ignored while in a trade |
+| CALL vs PUT | `--mode independent` (default): CALL and PUT are **separate trades** and can be open at the same time (like holding a call and a put option). A PUT signal does not close an open CALL; each closes only on its own zone, its 1% SL or 15:15. A new signal is ignored while a trade of the same side is open |
+| Other modes | `--mode reverse`: one position, and an opposite signal reverses it. `--mode hold` (or `--no-reverse`): one position, and opposite signals are ignored until it closes |
 | CALL exit | Next **RED (swing-high) Liquidity Swings zone** |
 | PUT exit | Next **GREEN (swing-low) zone** |
 | Exit timing, `--exit-at swing` (default) | Matches manual chart reading: exit at the **close of the swing candle** where the zone box starts, for the first zone whose swing candle is at or after the entry. ⚠️ **Hindsight:** a zone is only known 14 candles after its swing candle, so these exits can't be taken live and the results are overstated |
