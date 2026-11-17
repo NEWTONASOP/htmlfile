@@ -32,6 +32,21 @@ python ashishkumarverma/strategy.py --last-entry 14:30    # last time a new entr
 
 yfinance keeps 1-minute data for about the last 30 days, so `--sessions` can go up to about 20.
 
+## Data: 1-minute candles only, 15-minute built from them
+
+Only **1-minute** spot candles are downloaded from yfinance. The 15-minute candles are
+**built in the code** from those same 1-minute candles, so both timeframes always come from
+the same prices.
+
+| Candles | Where they come from | Used for |
+|---|---|---|
+| 1-minute | Downloaded from yfinance | After 09:45: finding the breakout minute, the entry price (that minute's close), and when SL or target is hit |
+| 15-minute | Built from 1-minute: 15 candles → 1 (Open = first open, High = highest high, Low = lowest low, Close = last close), on the 09:15, 09:30, … grid | 09:15–09:29 → ORB candle (ORB High / Low); 09:30–09:44 → alert candle (setup, Alert High / Low) |
+
+The built 15-minute candles should match TradingView's 15-minute chart, apart from small
+differences in Yahoo's data. The 1-minute candles stand in for the live spot price, which
+historical data does not provide tick by tick.
+
 ## Rules as implemented
 
 | # | Item | Implementation |
