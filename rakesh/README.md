@@ -46,8 +46,8 @@ Outputs go to `rakesh/results/`: `trades.csv`, `summary.txt` and `bars_with_indi
 | Item | Implementation |
 |---|---|
 | Timeframe | 5-minute candles |
-| BUY signal | The **60 EMA becomes the lowest line**: all of the 15/30/35/40/45/50 EMAs have crossed above it (it was not the lowest on the previous candle) |
-| SELL signal | The **60 EMA becomes the highest line**: all the faster EMAs have crossed below it |
+| BUY signal | The **60 EMA (black) crosses above all the other EMAs**: it becomes the highest line (it was not the highest on the previous candle) |
+| SELL signal | The **60 EMA crosses below all the other EMAs**: it becomes the lowest line |
 | Entry | **Open of the next candle** after the crossover candle closes |
 | Trading time | Entry candle must open before 15:00 (entries 09:15–15:00). Open trades are squared off at **15:15** |
 | Stop loss | BUY: **1 tick below the crossover candle's low**. SELL: 1 tick above its high. The crossover candle is the one before the entry candle. Tick = ₹0.10 (`--tick`) |

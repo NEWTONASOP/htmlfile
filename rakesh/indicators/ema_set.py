@@ -10,10 +10,10 @@
 | 50  | Red                      |
 | 60  | Black (main / longest)   |
 
-Crossover of the 60 EMA through all the others:
-  bull: the 60 EMA is below every other EMA (all faster EMAs have crossed above it)
-  bear: the 60 EMA is above every other EMA
-A BUY/SELL signal is the first candle on which that state becomes true.
+Crossover of the 60 EMA through all the others (direction as confirmed by Rakesh):
+  BUY : the 60 EMA crosses ABOVE every other EMA (it becomes the highest line)
+  SELL: the 60 EMA crosses BELOW every other EMA (it becomes the lowest line)
+A signal is the first candle on which that state becomes true.
 """
 from __future__ import annotations
 
@@ -41,17 +41,17 @@ def pine_ema(src: pd.Series, n: int) -> pd.Series:
 
 
 def ema_set(df: pd.DataFrame) -> pd.DataFrame:
-    """Columns ema15 ... ema60, bull/bear state and fresh bull_cross / bear_cross."""
+    """Columns ema15 ... ema60, buy/sell state and fresh buy_cross / sell_cross."""
     out = pd.DataFrame(index=df.index)
     for n in FAST_LENGTHS + [MAIN_LENGTH]:
         out[f"ema{n}"] = pine_ema(df[SOURCE], n)
     fast = out[[f"ema{n}" for n in FAST_LENGTHS]]
     main = out[f"ema{MAIN_LENGTH}"]
-    bull = main < fast.min(axis=1)
-    bear = main > fast.max(axis=1)
-    out["bull_state"], out["bear_state"] = bull, bear
-    out["bull_cross"] = bull & ~bull.shift(1, fill_value=True)
-    out["bear_cross"] = bear & ~bear.shift(1, fill_value=True)
+    buy = main > fast.max(axis=1)     # 60 EMA above all others
+    sell = main < fast.min(axis=1)    # 60 EMA below all others
+    out["buy_state"], out["sell_state"] = buy, sell
+    out["buy_cross"] = buy & ~buy.shift(1, fill_value=True)
+    out["sell_cross"] = sell & ~sell.shift(1, fill_value=True)
     return out
 
 

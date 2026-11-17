@@ -3,8 +3,8 @@
 Rakesh Rattan - EMA Crossover strategy backtest (5-minute candles, NSE intraday).
 
 EMAs     : 15, 30, 35, 40, 45, 50 and 60 (main) on close. See rakesh/indicators/ema_set.py.
-BUY      : the 60 EMA becomes the LOWEST line (all faster EMAs crossed above it).
-SELL     : the 60 EMA becomes the HIGHEST line.
+BUY      : the 60 EMA crosses ABOVE all other EMAs (becomes the highest line).
+SELL     : the 60 EMA crosses BELOW all other EMAs (becomes the lowest line).
 Entry    : open of the candle after the crossover candle. Entries 09:15 - 15:00.
 Stop loss: BUY 1 tick below the crossover candle's low, SELL 1 tick above its high
            (the crossover candle is the one before the entry candle).
@@ -75,7 +75,7 @@ class Trade:
 def run(df: pd.DataFrame, start_date, tick: float = TICK) -> list[Trade]:
     idx, dates = df.index, df.index.date
     O, H, L, C = (df[k].to_numpy() for k in ("Open", "High", "Low", "Close"))
-    BULL, BEAR, WARM = (df[k].to_numpy() for k in ("bull_cross", "bear_cross", "warm"))
+    BUYX, SELLX, WARM = (df[k].to_numpy() for k in ("buy_cross", "sell_cross", "warm"))
     trades: list[Trade] = []
     pos: Trade | None = None
 
@@ -87,8 +87,8 @@ def run(df: pd.DataFrame, start_date, tick: float = TICK) -> list[Trade]:
         # 1) entry at this candle's open after a crossover on the previous candle
         j = i - 1
         if (pos is None and dates[j] == dates[i] and dates[i] >= start_date and WARM[j]
-                and ts.time() < ENTRY_LAST_START and (BULL[j] or BEAR[j])):
-            side = "BUY" if BULL[j] else "SELL"
+                and ts.time() < ENTRY_LAST_START and (BUYX[j] or SELLX[j])):
+            side = "BUY" if BUYX[j] else "SELL"
             px = O[i]
             sl = L[j] - tick if side == "BUY" else H[j] + tick
             r = px - sl if side == "BUY" else sl - px
