@@ -12,6 +12,7 @@ Liquidity Swings [LuxAlgo] zones.
 | `indicators/kyle_algo.pine` | Original Kyle Algo v1 Pine source (MPL 2.0) |
 | `indicators/liquidity_swings.py` | Liquidity Swings pivots and drawn zones (Python port) |
 | `indicators/liquidity_swings.pine` | Original Liquidity Swings [LuxAlgo] Pine source (© LuxAlgo, CC BY-NC-SA 4.0) |
+| `data.py` | Data loader for this strategy: yfinance download, CSV loading, IST session |
 | `results/` | Output of the last run (created when you run it) |
 
 ## Run

@@ -34,11 +34,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
-from common.data import fetch_yf, load_csv, clean  # noqa: E402
-from laxit.indicators import macd as macd_ind, sma_bands  # noqa: E402
-
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))  # this strategy folder only
+from data import fetch_yf, load_csv, clean  # noqa: E402
+from indicators import macd as macd_ind, sma_bands  # noqa: E402
 
 CROSS_LOOKBACK = 3            # crossover on the setup candle or the 2 before it
 BODY_BEYOND = 0.5             # more than 50% of the body beyond the SMA

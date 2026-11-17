@@ -1,4 +1,4 @@
-"""Market data shared by all strategies: download from yfinance or load a CSV, in IST."""
+"""Market data for this strategy: download from yfinance or load a CSV, in IST."""
 from __future__ import annotations
 
 from datetime import time

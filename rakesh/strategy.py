@@ -29,11 +29,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
-from common.data import fetch_yf, load_csv, clean  # noqa: E402
-from rakesh.indicators import ema_set  # noqa: E402
-
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))  # this strategy folder only
+from data import fetch_yf, load_csv, clean  # noqa: E402
+from indicators import ema_set  # noqa: E402
 
 TICK = 0.10                  # RELIANCE tick size (stocks ₹1,000-5,000)
 QTY = 50

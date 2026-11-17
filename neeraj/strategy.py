@@ -33,11 +33,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
-from common.data import fetch_yf, load_csv, clean  # noqa: E402
-from neeraj.indicators import kyle_algo, liquidity_swings as ls  # noqa: E402
-
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))  # this strategy folder only
+from data import fetch_yf, load_csv, clean  # noqa: E402
+from indicators import kyle_algo, liquidity_swings as ls  # noqa: E402
 
 # ---------------------------------------------------------------- settings
 STOP_LOSS_PCT = 1.0

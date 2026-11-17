@@ -9,6 +9,7 @@ Intraday backtest on 5-minute candles using 7 EMAs. Default: `RELIANCE.NS`, last
 |---|---|
 | `strategy.py` | Backtest: crossover entries, 1-tick stop loss, 50% at 1:1, rest at 1:2, report |
 | `indicators/ema_set.py` | The 7 EMAs (15/30/35/40/45/50/60 of close, Pine `ta.ema`) and the 60 EMA crossover state |
+| `data.py` | Data loader for this strategy: yfinance download, CSV loading, IST session |
 | `results/` | Output of the last run (created when you run it) |
 
 No Pine source is needed: all lines are standard TradingView EMAs.

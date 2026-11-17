@@ -1,8 +1,10 @@
 # Intraday strategy backtests (NSE, yfinance)
 
-One folder per person's strategy. Each folder has its own `README.md`, the backtest
-(`strategy.py`) and an `indicators/` folder with each indicator as a separate Python file,
-next to the original TradingView Pine source where one was provided.
+One folder per person's strategy. Each folder is **self-contained**: nothing is shared
+between strategies, so a folder can be copied and run on its own. Every folder has its own
+`README.md`, the backtest (`strategy.py`), its own data loader (`data.py`) and an
+`indicators/` folder with each indicator as a separate Python file, next to the original
+TradingView Pine source where one was provided.
 
 | Strategy | Folder | Timeframe | Indicators |
 |---|---|---|---|
@@ -11,23 +13,24 @@ next to the original TradingView Pine source where one was provided.
 | Rakesh Rattan – EMA Crossover | [`rakesh/`](rakesh/README.md) | 5m | EMA 15/30/35/40/45/50/60 |
 
 ```
-common/data.py            shared: yfinance download, CSV loading, IST session cleaning
-common/ta.py              shared: Pine-compatible EMA / SMA
 neeraj/
   README.md
   strategy.py
+  data.py
   indicators/  kyle_algo.py  kyle_algo.pine  liquidity_swings.py  liquidity_swings.pine
 laxit/
   README.md
   strategy.py
+  data.py
   indicators/  sma_bands.py  macd.py  macd.pine
 rakesh/
   README.md
   strategy.py
+  data.py
   indicators/  ema_set.py
 ```
 
-## Run (from the repository root)
+## Run (from the repository root, or `cd <folder>` and `python strategy.py`)
 
 ```bash
 pip install -r requirements.txt
@@ -52,5 +55,6 @@ Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps a
 
 ## Adding a new person's strategy
 
-Create `<name>/` with `README.md`, `strategy.py` and `indicators/<indicator>.py`
-(plus the `.pine` source if available), and import data from `common.data` (and EMA/SMA from `common.ta`).
+Create `<name>/` with `README.md`, `strategy.py`, `data.py` and `indicators/<indicator>.py`
+(plus the `.pine` source if available). Keep everything inside that folder; do not import
+from another strategy.
