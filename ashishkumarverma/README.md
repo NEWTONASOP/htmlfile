@@ -40,14 +40,16 @@ yfinance keeps 1-minute data for about the last 30 days, so `--sessions` can go 
 | 2–3 | ORB candle | 09:15–09:30: **ORB High** = its high, **ORB Low** = its low |
 | 4–5 | Alert candle | 09:30–09:45. Close **above ORB High** = CE setup, **below ORB Low** = PE setup, **between** = no trade that day |
 | 6 | Alert levels | **Alert High** and **Alert Low** = the alert candle's high and low |
-| 7 | CE entry | After 09:45, the first time spot trades **above Alert High**. Fill at Alert High (or the 1-minute open if it opens above it) |
-| 8 | PE entry | After 09:45, the first time spot trades **below Alert Low**. Fill at Alert Low (or the open if it opens below it) |
+| 7 | CE entry | After 09:45, the first 1-minute candle that trades **strictly above Alert High**. Fill at that **1-minute candle's close** (`--entry-fill level` fills at Alert High instead) |
+| 8 | PE entry | After 09:45, the first 1-minute candle that trades **strictly below Alert Low**. Fill at that candle's close (`--entry-fill level`: at Alert Low) |
 | 9 | No candle close | Breakouts are detected on 1-minute candles, so entries don't wait for a 15-minute close |
-| 10 | Stop loss | CE: Alert Low. PE: Alert High. If that is more than **1%** (`--max-sl-pct`) from the entry, the SL is moved to exactly 1% |
+| 10 | Stop loss | CE: Alert Low. PE: Alert High. If that is more than **1%** (`--max-sl-pct`) from the actual entry, the SL is moved to exactly 1%. SL and target are checked from the minute after the entry |
 | 11 | Target | `--rr` × risk from entry (default **1:1**) |
 | 12 | Prices | Entry, SL and target all on the underlying spot price |
 | 13 | One trade | Only the setup's direction is traded, at most one trade per day, no re-entry after an exit |
 | 14 | Square-off | Anything open is closed at **15:15** (close of the 15:14 one-minute candle) |
 | – | Last entry (assumed) | The spec gives no end time for entries; default: no new entry from **15:00** (`--last-entry`) |
 | – | Same minute | If one 1-minute candle touches both SL and target, the SL counts first (conservative) |
+| – | Alert close = ORB High/Low | No trade (the close must be strictly above / below) |
+| – | Opposite break | A CE setup that breaks the Alert Low (or PE setup breaking the Alert High) is not traded |
 | – | Costs | `--cost-pct` round trip, % of entry value (default 0.05%) |

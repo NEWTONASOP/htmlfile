@@ -5,9 +5,11 @@ ASHISHKUMARVERMA - ORB (Opening Range Breakout) strategy backtest, NSE intraday.
 Levels   : 15-minute candles. ORB candle 09:15-09:30 (ORB High/Low), alert candle
            09:30-09:45 (Alert High/Low). Alert close > ORB High = CE setup,
            < ORB Low = PE setup, otherwise no trade that day.
-Entry    : after 09:45, the moment the SPOT price breaks the alert candle
-           (CE above Alert High, PE below Alert Low), checked on 1-minute candles;
-           no waiting for a candle close. Only the setup's direction is traded.
+Entry    : after 09:45, when the SPOT price breaks the alert candle (CE above Alert High,
+           PE below Alert Low), checked on 1-minute candles, not waiting for a 15-minute
+           close. Fill at the close of the first 1-minute candle that breaks the level
+           (--entry-fill close, default) or at the level itself (--entry-fill level).
+           Only the setup's direction is traded.
 Stop loss: CE = Alert Low, PE = Alert High, capped at --max-sl-pct (1%) of the entry.
 Target   : --rr x risk (default 1:1).
 Rules    : at most one trade per day, no re-entry; entries until --last-entry
@@ -36,6 +38,7 @@ from data import fetch_1m, load_csv, clean, resample  # noqa: E402
 from indicators.orb import orb_levels  # noqa: E402
 
 ENTRY_START = time(9, 45)
+ENTRY_FILL = "close"          # "close" of the breakout minute, or "level" (Alert High/Low)
 LAST_ENTRY = "15:00"
 SQUARE_OFF = time(15, 15)
 RR = 1.0
@@ -62,8 +65,14 @@ class Trade:
         return (self.exit - self.entry) if self.side == "CE" else (self.entry - self.exit)
 
 
-def run_day(m1: pd.DataFrame, lv: pd.Series, rr: float, cap: float, last_entry: time) -> Trade | None:
-    """Simulate one day on 1-minute spot candles. Stop is checked before target in a candle."""
+def run_day(m1: pd.DataFrame, lv: pd.Series, rr: float, cap: float, last_entry: time,
+            fill: str = ENTRY_FILL) -> Trade | None:
+    """Simulate one day on 1-minute spot candles. Stop is checked before target in a candle.
+
+    fill="close": enter at the close of the breakout minute; SL/target are checked from the
+    next minute. fill="level": enter at the level (or the open if it gaps past it) and
+    check SL/target on the breakout minute too.
+    """
     side = lv.setup
     bars = m1[(m1.index.time >= ENTRY_START)]
     t: Trade | None = None
@@ -73,17 +82,26 @@ def run_day(m1: pd.DataFrame, lv: pd.Series, rr: float, cap: float, last_entry: 
             if ts.time() >= last_entry or end > SQUARE_OFF:
                 return None                                   # no breakout in time
             if side == "CE" and b.High > lv.alert_high:
-                px = max(b.Open, lv.alert_high)
+                px = b.Close if fill == "close" else max(b.Open, lv.alert_high)
                 stop = max(lv.alert_low, px * (1 - cap))
+                if px <= stop:
+                    return None                               # no room for a stop
                 t = Trade(lv.name, "CE", ts, px, lv.alert_low, stop, px + rr * (px - stop),
                           stop > lv.alert_low)
             elif side == "PE" and b.Low < lv.alert_low:
-                px = min(b.Open, lv.alert_low)
+                px = b.Close if fill == "close" else min(b.Open, lv.alert_low)
                 stop = min(lv.alert_high, px * (1 + cap))
+                if px >= stop:
+                    return None
                 t = Trade(lv.name, "PE", ts, px, lv.alert_high, stop, px - rr * (stop - px),
                           stop < lv.alert_high)
             else:
                 continue
+            if fill == "close":
+                if end >= SQUARE_OFF:
+                    t.exit_time, t.exit, t.reason = ts, b.Close, "Square-off 15:15"
+                    return t
+                continue                                      # entered at the close: manage from next minute
         # manage the open trade (including the entry candle)
         if t.side == "CE":
             if b.Low <= t.stop:
@@ -149,6 +167,8 @@ def main():
     ap.add_argument("--rr", type=float, default=RR, help="target as a multiple of risk (1 = 1:1)")
     ap.add_argument("--max-sl-pct", type=float, default=MAX_SL_PCT, help="cap on SL distance, %% of entry")
     ap.add_argument("--last-entry", default=LAST_ENTRY, help="no new entry from this time (HH:MM)")
+    ap.add_argument("--entry-fill", choices=["close", "level"], default=ENTRY_FILL,
+                    help="close: close of the breakout minute; level: at the Alert High/Low")
     ap.add_argument("--qty", type=int, default=1)
     ap.add_argument("--cost-pct", type=float, default=COST_PCT, help="round-trip cost, %% of entry value")
     ap.add_argument("--out", default=str(HERE / "results"))
@@ -167,14 +187,16 @@ def main():
     trades = []
     for day, lv in days.iterrows():
         if lv.setup in ("CE", "PE"):
-            t = run_day(m1[m1.index.date == day], lv, a.rr, a.max_sl_pct / 100, last_entry)
+            t = run_day(m1[m1.index.date == day], lv, a.rr, a.max_sl_pct / 100, last_entry,
+                        a.entry_fill)
             if t is not None:
                 trades.append(t)
     tl, lines = report(trades, days, a.qty, a.cost_pct)
 
     header = (f"ASHISHKUMARVERMA ORB | {a.symbol} spot | 15m levels, 1m breakout | "
               f"{window[0]} -> {window[-1]} ({len(window)} sessions)\n"
-              f"Entry on break of the alert candle after 09:45 (until {last_entry:%H:%M}), "
+              f"Entry on break of the alert candle after 09:45 (until {last_entry:%H:%M}, "
+              f"fill at {'breakout-minute close' if a.entry_fill == 'close' else 'the level'}), "
               f"SL alert candle capped at {a.max_sl_pct}%, target 1:{a.rr:g}, one trade a day, "
               f"square-off {SQUARE_OFF:%H:%M}.\n")
     os.makedirs(a.out, exist_ok=True)
