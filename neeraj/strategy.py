@@ -2,51 +2,44 @@
 """
 Neeraj - Kyle Algo + Liquidity Swings strategy backtest (5-minute, NSE intraday).
 
+Indicators live in neeraj/indicators/ (Python ports + original Pine sources).
+
 Entries : Kyle Algo EMA ribbon (15 EMAs of HIGH, lengths 9..51 step 3).
           Fresh close above the whole ribbon -> CALL (long) next candle open.
           Fresh close below the whole ribbon -> PUT (short) next candle open.
-          An opposite fresh signal while in a trade reverses the position.
-Exits   : Liquidity Swings (LuxAlgo) confirmed zones, pivot lookback 14.
-          CALL exits on the next confirmed swing-high (RED) zone,
-          PUT exits on the next confirmed swing-low (GREEN) zone.
+          Default --mode independent: CALL and PUT are separate trades that can
+          overlap (--mode reverse / hold for a single position).
+Exits   : Liquidity Swings (LuxAlgo) zones that get drawn (Count filter 0), lookback 14.
+          CALL exits on the next RED (swing-high) zone, PUT on the next GREEN zone.
+          Default --exit-at swing: at the zone's swing candle, like manual chart
+          reading (hindsight). --exit-at confirm: when the zone appears live.
 Stop    : fixed 1% from entry price (intrabar, on candle high/low).
-Session : square off at 15:15 IST; no new entry from the candle ending 15:15.
+Session : square off at 15:15 IST; no new entry on the candle ending 15:15.
 
 Usage:
-    python backtest.py                       # RELIANCE.NS via yfinance, last 5 sessions
-    python backtest.py --sessions 5 --symbol RELIANCE.NS
-    python backtest.py --csv data.csv        # use your own 5m OHLC (Datetime,Open,High,Low,Close)
+    python neeraj/strategy.py                       # RELIANCE.NS via yfinance, last 5 sessions
+    python neeraj/strategy.py --sessions 5 --symbol RELIANCE.NS
+    python neeraj/strategy.py --csv data.csv        # use your own 5m OHLC (Datetime,Open,High,Low,Close)
 """
 from __future__ import annotations
 
 import argparse
 import os
+import sys
 from dataclasses import dataclass, asdict
 from datetime import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-IST = "Asia/Kolkata"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
+from common.data import fetch_yf, load_csv, clean  # noqa: E402
+from neeraj.indicators import kyle_algo, liquidity_swings as ls  # noqa: E402
+
+HERE = Path(__file__).resolve().parent
 
 # ---------------------------------------------------------------- settings
-# Kyle Algo inputs as specified. NOTE: these four only drive the Supertrend
-# BUY/SELL labels and candle colouring, which the strategy ignores. The EMA
-# ribbon (the only part used) has no inputs. Kept here for documentation.
-KYLE_SENSITIVITY = 1.7
-KYLE_KELTNER_LEN = 11
-KYLE_ATR_LEN = 10
-KYLE_FACTOR = 1.0
-RIBBON_LENGTHS = list(range(9, 52, 3))  # 9,12,...,51 -> 15 EMAs of high
-
-# Liquidity Swings inputs. Swing Area / Filter only change how the zone box is
-# drawn/hidden; with Count filter = 0 every confirmed pivot zone is shown, so
-# every confirmed pivot is an exit event.
-LS_PIVOT_LOOKBACK = 14
-LS_SWING_AREA = "Wick Extremity"
-LS_FILTER_BY = "Count"
-LS_FILTER_VALUE = 0
-
 STOP_LOSS_PCT = 1.0
 SQUARE_OFF = time(15, 15)        # positions closed at 15:15 (close of 15:10 bar)
 # No new trade on the candle ending 15:15 -> last entry fills at 15:05 open,
@@ -56,127 +49,18 @@ LAST_ENTRY_SIGNAL_END = time(15, 5)
 LAST_EXIT_SIGNAL_END = time(15, 10)
 
 
-# ---------------------------------------------------------------- data
-def fetch_yf(symbol: str, period: str = "60d", interval: str = "5m") -> pd.DataFrame:
-    import yfinance as yf
-
-    df = yf.download(symbol, period=period, interval=interval, progress=False,
-                     auto_adjust=False, multi_level_index=False)
-    if df is None or df.empty:
-        raise SystemExit(f"yfinance returned no data for {symbol}. "
-                         "Check network access to query1/query2.finance.yahoo.com.")
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    return df
-
-
-def load_csv(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
-    tcol = next(c for c in df.columns if c.lower() in ("datetime", "date", "time", "timestamp"))
-    df[tcol] = pd.to_datetime(df[tcol])
-    df = df.set_index(tcol)
-    df.columns = [c.capitalize() for c in df.columns]
-    return df
-
-
-def clean(df: pd.DataFrame) -> pd.DataFrame:
-    df = df[["Open", "High", "Low", "Close"]].dropna().copy()
-    idx = df.index
-    if idx.tz is None:
-        idx = idx.tz_localize(IST)
-    df.index = idx.tz_convert(IST)
-    df = df[~df.index.duplicated(keep="last")].sort_index()
-    t = df.index.time
-    df = df[(t >= time(9, 15)) & (t <= time(15, 25))]  # regular NSE session, bar start times
-    return df
-
-
 # ---------------------------------------------------------------- indicators
-def ema(s: pd.Series, n: int) -> pd.Series:
-    # Pine ta.ema: alpha = 2/(n+1), recursive. Seed differences vanish after warm-up.
-    return s.ewm(span=n, adjust=False).mean()
-
-
-def pivots(high: np.ndarray, low: np.ndarray, L: int):
-    """Pine-style ta.pivothigh/ta.pivotlow(L, L).
-
-    Returns boolean arrays flagged on the CONFIRMATION bar (pivot bar + L),
-    which is when Liquidity Swings draws the zone. Ties: pivot must be strictly
-    beyond the left-side bars and at least equal to the right-side bars.
-    """
-    n = len(high)
-    ph = np.zeros(n, bool)
-    pl = np.zeros(n, bool)
-    for t in range(2 * L, n):
-        p = t - L
-        h, lo = high[p], low[p]
-        if h > high[p - L:p].max() and h >= high[p + 1:t + 1].max():
-            ph[t] = True
-        if lo < low[p - L:p].min() and lo <= low[p + 1:t + 1].min():
-            pl[t] = True
-    return ph, pl
-
-
-def visible_zones(o, h, lo, c, conf, L: int, high_side: bool) -> dict:
-    """Port of LuxAlgo Liquidity Swings get_counts/set_zone with Filter = Count.
-
-    When a pivot confirms (bar j = pivot + L) its count resets to 0. On each later
-    bar, the candle L bars back is counted if it trades inside the zone
-    (low < top and high > btm). The zone box is only drawn when the count crosses
-    above the filter value (0), i.e. when price first revisits the zone. If the
-    next pivot of the same side confirms first, the zone is never drawn.
-    Returns arrays: appear (box drawn on this bar), swing (flag on the pivot
-    candle of a drawn zone), pivot_idx/top/btm (set on the appear bar).
-    """
-    n = len(h)
-    appear, swing = np.zeros(n, bool), np.zeros(n, bool)
-    pivot_idx = np.full(n, -1)
-    top_a, btm_a = np.full(n, np.nan), np.full(n, np.nan)
-    p = top = btm = None
-    count = 0
-    for j in range(n):
-        if conf[j]:
-            p, count = j - L, 0
-            if high_side:   # Wick Extremity
-                top, btm = h[p], max(o[p], c[p])
-            else:
-                top, btm = min(o[p], c[p]), lo[p]
-            continue
-        if p is None:
-            continue
-        k = j - L
-        if lo[k] < top and h[k] > btm:
-            count += 1
-            if count == 1 and LS_FILTER_VALUE < 1:  # ta.crossover(count, filterValue=0)
-                appear[j], swing[p] = True, True
-                pivot_idx[j], top_a[j], btm_a[j] = p, top, btm
-    return dict(appear=appear, swing=swing, pivot_idx=pivot_idx, top=top_a, btm=btm_a)
-
-
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    ribbon = pd.concat([ema(df["High"], n) for n in RIBBON_LENGTHS], axis=1)
-    df["ribbon_top"] = ribbon.max(axis=1)
-    df["ribbon_bot"] = ribbon.min(axis=1)
+    df = pd.concat([df, kyle_algo.ema_ribbon(df)], axis=1)
     above = df["Close"] > df["ribbon_top"]
     below = df["Close"] < df["ribbon_bot"]
     df["above"], df["below"] = above, below
     # fresh cross only: this candle fully above/below, previous candle was not
     df["call_sig"] = above & ~above.shift(1, fill_value=True)
     df["put_sig"] = below & ~below.shift(1, fill_value=True)
-
-    L = LS_PIVOT_LOOKBACK
-    o, h, lo, c = (df[k].to_numpy() for k in ("Open", "High", "Low", "Close"))
-    ph, pl = pivots(h, lo, L)
-    for color, conf in (("red", ph), ("green", pl)):
-        z = visible_zones(o, h, lo, c, conf, L, high_side=(color == "red"))
-        df[f"{color}_zone"] = z["appear"]    # zone box drawn on this candle (live)
-        df[f"{color}_swing"] = z["swing"]    # swing candle of a zone that gets drawn (hindsight)
-        df[f"{color}_pivot_time"] = pd.Series(z["pivot_idx"]).map(
-            lambda k: df.index[int(k)] if k >= 0 else pd.NaT).to_numpy()
-        df[f"{color}_top"], df[f"{color}_btm"] = z["top"], z["btm"]
+    df = pd.concat([df, ls.liquidity_zones(df)], axis=1)
     # warm-up: need the slowest EMA and the pivot window to be meaningful
-    df["warm"] = np.arange(len(df)) >= max(3 * max(RIBBON_LENGTHS), 2 * L)
+    df["warm"] = np.arange(len(df)) >= max(kyle_algo.warmup_bars(), 2 * ls.PIVOT_LOOKBACK)
     return df
 
 
@@ -339,7 +223,7 @@ def report(trades: list[Trade], qty: int, cost_pct: float) -> tuple[pd.DataFrame
 def list_zones(df: pd.DataFrame, day) -> None:
     """Print every zone box drawn on `day`: where it starts and when it appears."""
     d = df[df.index.date == day]
-    print(f"Liquidity Swings zones drawn on {day} (lookback {LS_PIVOT_LOOKBACK}, Count filter {LS_FILTER_VALUE})")
+    print(f"Liquidity Swings zones drawn on {day} (lookback {ls.PIVOT_LOOKBACK}, Count filter {ls.FILTER_VALUE})")
     for ts, r in d.iterrows():
         for color in ("red", "green"):
             if r[f"{color}_zone"]:
@@ -366,7 +250,7 @@ def main():
     ap.add_argument("--no-reverse", action="store_true", help="same as --mode hold")
     ap.add_argument("--zones", metavar="YYYY-MM-DD",
                     help="only list the Liquidity Swings zones drawn on that date, then exit")
-    ap.add_argument("--out", default="results")
+    ap.add_argument("--out", default=str(HERE / "results"))
     a = ap.parse_args()
 
     raw = load_csv(a.csv) if a.csv else fetch_yf(a.symbol)
@@ -397,7 +281,7 @@ def main():
     header = (f"Kyle Algo ribbon + Liquidity Swings ({mode}) | {a.symbol} 5m | "
               f"{window[0]} -> {window[-1]} ({len(window)} sessions)\n"
               f"Warm-up history: {sessions[0]} onward ({len(df)} bars). SL {STOP_LOSS_PCT}%, "
-              f"pivot lookback {LS_PIVOT_LOOKBACK}, square-off {SQUARE_OFF:%H:%M} IST\n")
+              f"pivot lookback {ls.PIVOT_LOOKBACK}, square-off {SQUARE_OFF:%H:%M} IST\n")
     os.makedirs(a.out, exist_ok=True)
     tl.to_csv(os.path.join(a.out, "trades.csv"), index=False)
     with open(os.path.join(a.out, "summary.txt"), "w") as f:

@@ -4,6 +4,7 @@ LAXIT - intraday strategy backtest (5-minute candles by default, NSE).
 
 Indicators : SMA 20 of High, SMA 20 of Low, MACD (TradingView built-in: EMA 12 - EMA 26
              of close, signal = EMA 9 of MACD, crossover = histogram crossing 0).
+             See laxit/indicators/ (Python ports + original Pine source).
 CALL setup : green candle, more than 50% of its body above SMA20 High, and a bullish
              MACD crossover on this candle or the 2 before it (MACD still above signal).
 PUT setup  : red candle, more than 50% of its body below SMA20 Low, bearish crossover
@@ -15,26 +16,30 @@ Management : at 1:1 book 50%, move SL to cost, then trail the rest with the SMA 
              (CALL: SMA20 Low, PUT: SMA20 High), never loosening. Forced exit 15:15.
 
 Usage:
-    python laxit.py                        # RELIANCE.NS 5m, last 5 complete sessions
-    python laxit.py --interval 2m          # same rules on 2-minute candles
-    python laxit.py --sessions 40 --cost-pct 0.05
-    python laxit.py --one-at-a-time        # no CALL/PUT overlap
-    python laxit.py --day 2026-11-13       # print only that day's trades
+    python laxit/strategy.py                        # RELIANCE.NS 5m, last 5 complete sessions
+    python laxit/strategy.py --interval 2m          # same rules on 2-minute candles
+    python laxit/strategy.py --sessions 40 --cost-pct 0.05
+    python laxit/strategy.py --one-at-a-time        # no CALL/PUT overlap
+    python laxit/strategy.py --day 2026-11-13       # print only that day's trades
 """
 from __future__ import annotations
 
 import argparse
 import os
+import sys
 from dataclasses import dataclass, asdict
 from datetime import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from backtest import fetch_yf, load_csv, clean
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
+from common.data import fetch_yf, load_csv, clean  # noqa: E402
+from laxit.indicators import macd as macd_ind, sma_bands  # noqa: E402
 
-SMA_LEN = 20
-MACD_FAST, MACD_SLOW, MACD_SIGNAL = 12, 26, 9
+HERE = Path(__file__).resolve().parent
+
 CROSS_LOOKBACK = 3            # crossover on the setup candle or the 2 before it
 BODY_BEYOND = 0.5             # more than 50% of the body beyond the SMA
 ENTRY_START = time(9, 45)     # entry candle may start at 09:45 ...
@@ -43,36 +48,13 @@ SQUARE_OFF = time(15, 15)     # forced exit at the close of the candle ending 15
 BAR_MIN = 5                   # set from --interval
 
 
-def pine_ema(src: pd.Series, n: int) -> pd.Series:
-    """Pine ta.ema: alpha = 2/(n+1), seeded with the SMA of the first n values."""
-    v = src.to_numpy(float)
-    out = np.full(len(v), np.nan)
-    start = np.flatnonzero(~np.isnan(v))
-    if len(start) == 0 or len(v) - start[0] < n:
-        return pd.Series(out, index=src.index)
-    s0 = start[0]
-    out[s0 + n - 1] = v[s0:s0 + n].mean()
-    a = 2 / (n + 1)
-    for i in range(s0 + n, len(v)):
-        out[i] = a * v[i] + (1 - a) * out[i - 1]
-    return pd.Series(out, index=src.index)
-
-
 # ---------------------------------------------------------------- indicators
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    o, h, lo, c = df["Open"], df["High"], df["Low"], df["Close"]
-    df["sma_h"] = h.rolling(SMA_LEN).mean()
-    df["sma_l"] = lo.rolling(SMA_LEN).mean()
-    macd = pine_ema(c, MACD_FAST) - pine_ema(c, MACD_SLOW)
-    sig = pine_ema(macd, MACD_SIGNAL)
-    df["macd"], df["macd_sig"] = macd, sig
-    above = macd > sig
-    bull_x = above & ~above.shift(1, fill_value=True)          # ta.crossover(macd, signal)
-    below = macd < sig
-    bear_x = below & ~below.shift(1, fill_value=True)          # ta.crossunder(macd, signal)
-    recent_bull = bull_x.rolling(CROSS_LOOKBACK, min_periods=1).max().astype(bool) & above
-    recent_bear = bear_x.rolling(CROSS_LOOKBACK, min_periods=1).max().astype(bool) & below
+    df = pd.concat([df, sma_bands.sma_bands(df), macd_ind.macd(df)], axis=1)
+    o, c = df["Open"], df["Close"]
+    above, below = df["macd"] > df["macd_sig"], df["macd"] < df["macd_sig"]
+    recent_bull = df["bull_cross"].rolling(CROSS_LOOKBACK, min_periods=1).max().astype(bool) & above
+    recent_bear = df["bear_cross"].rolling(CROSS_LOOKBACK, min_periods=1).max().astype(bool) & below
 
     body = (c - o).abs()
     green, red = c > o, c < o
@@ -81,7 +63,7 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     dn_part = (np.minimum(o, df["sma_l"]) - c).clip(lower=0)
     df["call_setup"] = green & (up_part > BODY_BEYOND * body) & recent_bull
     df["put_setup"] = red & (dn_part > BODY_BEYOND * body) & recent_bear
-    df["warm"] = np.arange(len(df)) >= 5 * MACD_SLOW
+    df["warm"] = np.arange(len(df)) >= macd_ind.warmup_bars()
     return df
 
 
@@ -218,7 +200,7 @@ def main():
     ap.add_argument("--qty", type=int, default=1)
     ap.add_argument("--cost-pct", type=float, default=0.0, help="round-trip cost in %% of entry")
     ap.add_argument("--day", help="print only this date's trades (YYYY-MM-DD)")
-    ap.add_argument("--out", default="results_laxit")
+    ap.add_argument("--out", default=str(HERE / "results"))
     a = ap.parse_args()
 
     global BAR_MIN
@@ -236,7 +218,7 @@ def main():
 
     mode = "one trade at a time" if a.one_at_a_time else "CALL & PUT independent"
     header = (f"LAXIT ({mode}) | {a.symbol} {a.interval} | {window[0]} -> {window[-1]} ({len(window)} sessions)\n"
-              f"SMA{SMA_LEN} High/Low, MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}, crossover within "
+              f"SMA{sma_bands.LENGTH} High/Low, MACD {macd_ind.FAST}/{macd_ind.SLOW}/{macd_ind.SIGNAL}, crossover within "
               f"{CROSS_LOOKBACK} candles, entries {ENTRY_START:%H:%M}-{ENTRY_END:%H:%M}, "
               f"exit by {SQUARE_OFF:%H:%M}. P&L counts 50% at T1 + 50% at final exit.\n")
     os.makedirs(a.out, exist_ok=True)
