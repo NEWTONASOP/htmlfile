@@ -11,6 +11,7 @@ TradingView Pine source where one was provided.
 | Neeraj – Kyle Algo + Liquidity Swings | [`neeraj/`](neeraj/README.md) | 5m | Kyle Algo EMA ribbon, Liquidity Swings [LuxAlgo] |
 | LAXIT – SMA 20 High/Low + MACD | [`laxit/`](laxit/README.md) | 5m (2m option) | SMA 20 High/Low, MACD |
 | Rakesh Rattan – EMA Crossover | [`rakesh/`](rakesh/README.md) | 5m | EMA 15/30/35/40/45/50/60 |
+| TOUFIK – EMA 4 / MA 10 | [`toufik/`](toufik/README.md) | 3m | EMA 4, MA 10 (SMA) |
 
 ```
 neeraj/
@@ -28,6 +29,12 @@ rakesh/
   strategy.py
   data.py
   indicators/  ema_set.py
+toufik/
+  README.md
+  strategy.py
+  data.py
+  chart.py
+  indicators/  ema.py  ma.py
 ```
 
 ## Run (from the repository root, or `cd <folder>` and `python strategy.py`)
@@ -37,6 +44,7 @@ pip install -r requirements.txt
 python neeraj/strategy.py
 python laxit/strategy.py
 python rakesh/strategy.py
+python toufik/strategy.py
 ```
 
 Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps about
@@ -51,6 +59,7 @@ Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps a
 !python neeraj/strategy.py
 !python laxit/strategy.py
 !python rakesh/strategy.py
+!python toufik/strategy.py
 ```
 
 ## Adding a new person's strategy
