@@ -40,9 +40,13 @@ warm-up, so the EMAs and pivots are settled before the backtest week starts.
 * **Kyle Algo (Sensitivity 1.7, Keltner 11, ATR 10, Factor 1):** these inputs only drive the
   Supertrend BUY/SELL labels and the candle colours. The EMA ribbon has no inputs, so these
   settings **do not change any trade**. They are recorded in `backtest.py` for reference only.
-* **Liquidity Swings (Lookback 14, Wick Extremity, Filter by Count, 0):** Swing Area only
-  changes the zone's box bounds (logged for reference). A Count filter of 0 hides no zones,
-  so every confirmed pivot is an exit event.
+* **Liquidity Swings (Lookback 14, Wick Extremity, Filter by Count, 0):** ported from the
+  LuxAlgo source (`get_counts` / `set_zone`). A zone box is only **drawn** once a later
+  candle trades back into the zone (count crosses above 0). Swings that price never
+  revisits before the next swing are never drawn and are ignored for exits. A drawn
+  zone can therefore appear more than 14 candles after its swing candle.
+* List the zones drawn on a day, to compare with TradingView:
+  `python backtest.py --zones 2026-11-13`
 * Pivot ties: the pivot candle must be strictly higher (or lower) than the 14 candles to its
   left and at least equal to the 14 to its right.
 * "Fully above or below the ribbon" uses a strict comparison of close against the highest or

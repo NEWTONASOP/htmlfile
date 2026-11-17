@@ -117,6 +117,42 @@ def pivots(high: np.ndarray, low: np.ndarray, L: int):
     return ph, pl
 
 
+def visible_zones(o, h, lo, c, conf, L: int, high_side: bool) -> dict:
+    """Port of LuxAlgo Liquidity Swings get_counts/set_zone with Filter = Count.
+
+    When a pivot confirms (bar j = pivot + L) its count resets to 0. On each later
+    bar, the candle L bars back is counted if it trades inside the zone
+    (low < top and high > btm). The zone box is only drawn when the count crosses
+    above the filter value (0), i.e. when price first revisits the zone. If the
+    next pivot of the same side confirms first, the zone is never drawn.
+    Returns arrays: appear (box drawn on this bar), swing (flag on the pivot
+    candle of a drawn zone), pivot_idx/top/btm (set on the appear bar).
+    """
+    n = len(h)
+    appear, swing = np.zeros(n, bool), np.zeros(n, bool)
+    pivot_idx = np.full(n, -1)
+    top_a, btm_a = np.full(n, np.nan), np.full(n, np.nan)
+    p = top = btm = None
+    count = 0
+    for j in range(n):
+        if conf[j]:
+            p, count = j - L, 0
+            if high_side:   # Wick Extremity
+                top, btm = h[p], max(o[p], c[p])
+            else:
+                top, btm = min(o[p], c[p]), lo[p]
+            continue
+        if p is None:
+            continue
+        k = j - L
+        if lo[k] < top and h[k] > btm:
+            count += 1
+            if count == 1 and LS_FILTER_VALUE < 1:  # ta.crossover(count, filterValue=0)
+                appear[j], swing[p] = True, True
+                pivot_idx[j], top_a[j], btm_a[j] = p, top, btm
+    return dict(appear=appear, swing=swing, pivot_idx=pivot_idx, top=top_a, btm=btm_a)
+
+
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     ribbon = pd.concat([ema(df["High"], n) for n in RIBBON_LENGTHS], axis=1)
@@ -130,20 +166,15 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["put_sig"] = below & ~below.shift(1, fill_value=True)
 
     L = LS_PIVOT_LOOKBACK
-    ph, pl = pivots(df["High"].to_numpy(), df["Low"].to_numpy(), L)
-    df["red_zone"] = ph     # swing high confirmed -> exit CALL
-    df["green_zone"] = pl   # swing low confirmed  -> exit PUT
-    # same pivots flagged on the swing candle itself (where the zone box starts).
-    # Knowing this at the swing candle needs the next L candles -> hindsight.
-    df["red_swing"] = pd.Series(ph, index=df.index).shift(-L, fill_value=False).astype(bool)
-    df["green_swing"] = pd.Series(pl, index=df.index).shift(-L, fill_value=False).astype(bool)
-    # zone bounds (Wick Extremity), for reference in the trade log
-    o, c, h, lo = (df[k].shift(L) for k in ("Open", "Close", "High", "Low"))
-    df["red_top"] = np.where(ph, h, np.nan)
-    df["red_btm"] = np.where(ph, np.maximum(o, c), np.nan)
-    df["green_top"] = np.where(pl, np.minimum(o, c), np.nan)
-    df["green_btm"] = np.where(pl, lo, np.nan)
-    df["zone_pivot_time"] = pd.Series(df.index, index=df.index).shift(L)
+    o, h, lo, c = (df[k].to_numpy() for k in ("Open", "High", "Low", "Close"))
+    ph, pl = pivots(h, lo, L)
+    for color, conf in (("red", ph), ("green", pl)):
+        z = visible_zones(o, h, lo, c, conf, L, high_side=(color == "red"))
+        df[f"{color}_zone"] = z["appear"]    # zone box drawn on this candle (live)
+        df[f"{color}_swing"] = z["swing"]    # swing candle of a zone that gets drawn (hindsight)
+        df[f"{color}_pivot_time"] = pd.Series(z["pivot_idx"]).map(
+            lambda k: df.index[int(k)] if k >= 0 else pd.NaT).to_numpy()
+        df[f"{color}_top"], df[f"{color}_btm"] = z["top"], z["btm"]
     # warm-up: need the slowest EMA and the pivot window to be meaningful
     df["warm"] = np.arange(len(df)) >= max(3 * max(RIBBON_LENGTHS), 2 * L)
     return df
@@ -236,9 +267,9 @@ def run(df: pd.DataFrame, start_date, reverse: bool = True, exit_at: str = "swin
                     put_sig = False
         if pos is not None:
             if exit_at == "confirm" and pos.side == "CALL" and df["red_zone"].iat[i]:
-                exit_reason, zone_time = "RED liquidity zone", df["zone_pivot_time"].iat[i]
+                exit_reason, zone_time = "RED liquidity zone", df["red_pivot_time"].iat[i]
             elif exit_at == "confirm" and pos.side == "PUT" and df["green_zone"].iat[i]:
-                exit_reason, zone_time = "GREEN liquidity zone", df["zone_pivot_time"].iat[i]
+                exit_reason, zone_time = "GREEN liquidity zone", df["green_pivot_time"].iat[i]
             if reverse and pos.side == "CALL" and put_sig:
                 exit_reason = exit_reason or "Reverse (PUT signal)"
                 enter = "PUT"
@@ -303,6 +334,17 @@ def report(trades: list[Trade], qty: int, cost_pct: float) -> tuple[pd.DataFrame
     return tl, "\n".join(lines)
 
 
+def list_zones(df: pd.DataFrame, day) -> None:
+    """Print every zone box drawn on `day`: where it starts and when it appears."""
+    d = df[df.index.date == day]
+    print(f"Liquidity Swings zones drawn on {day} (lookback {LS_PIVOT_LOOKBACK}, Count filter {LS_FILTER_VALUE})")
+    for ts, r in d.iterrows():
+        for color in ("red", "green"):
+            if r[f"{color}_zone"]:
+                print(f"{color.upper():5} zone: box starts {r[f'{color}_pivot_time']:%Y-%m-%d %H:%M} | "
+                      f"appears {ts:%H:%M} | {r[f'{color}_btm']:.2f}-{r[f'{color}_top']:.2f}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--symbol", default="RELIANCE.NS")
@@ -317,6 +359,8 @@ def main():
     ap.add_argument("--no-reverse", action="store_true",
                     help="ignore opposite ribbon signals while in a trade "
                          "(exit only on liquidity zone, SL or 15:15)")
+    ap.add_argument("--zones", metavar="YYYY-MM-DD",
+                    help="only list the Liquidity Swings zones drawn on that date, then exit")
     ap.add_argument("--out", default="results")
     a = ap.parse_args()
 
@@ -328,6 +372,9 @@ def main():
         df = df[df.index.date <= sessions[-1]]
     window = sessions[-a.sessions:]
     df = add_indicators(df)
+    if a.zones:
+        list_zones(df, pd.Timestamp(a.zones).date())
+        return
     trades = run(df, window[0], reverse=not a.no_reverse, exit_at=a.exit_at)
     tl, summary = report(trades, a.qty, a.cost_pct)
 
