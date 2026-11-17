@@ -18,6 +18,7 @@ Usage:
     python toufik/strategy.py --sl-pct 0.5 --ma-type ema
     python toufik/strategy.py --qty 500 --brokerage 20 --cost-pct 0.05
     python toufik/strategy.py --day 2026-11-17
+    python toufik/strategy.py --source angel         # Angel One candles (ANGEL_* env variables)
 """
 from __future__ import annotations
 
@@ -33,7 +34,7 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))  # this strategy folder only
-from data import fetch_1m, load_csv, clean, resample  # noqa: E402
+from data import fetch_1m, fetch_angel, load_csv, clean, resample  # noqa: E402
 from indicators import ema as ema_ind, ma as ma_ind  # noqa: E402
 from chart import make_chart  # noqa: E402
 
@@ -170,6 +171,9 @@ def report(trades: list[Trade], qty: int, cost_pct: float, brokerage: float):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--symbol", default="RELIANCE.NS")
+    ap.add_argument("--source", choices=["yfinance", "angel"], default="yfinance",
+                    help="candle data: yfinance (1m grouped into 3m) or angel (Angel One SmartAPI, "
+                         "native 3m; needs ANGEL_* environment variables)")
     ap.add_argument("--csv", help="load 1-minute OHLC from CSV instead of yfinance")
     ap.add_argument("--sessions", type=int, default=5, help="trading sessions to backtest (max ~20)")
     ap.add_argument("--include-today", action="store_true")
@@ -182,8 +186,13 @@ def main():
     ap.add_argument("--out", default=str(HERE / "results"))
     a = ap.parse_args()
 
-    raw = load_csv(a.csv) if a.csv else fetch_1m(a.symbol, days=int(a.sessions * 1.6) + 6)
-    df = resample(clean(raw), TIMEFRAME_MIN)
+    days = int(a.sessions * 1.6) + 6
+    if a.csv:
+        df = resample(clean(load_csv(a.csv)), TIMEFRAME_MIN)
+    elif a.source == "angel":
+        df = clean(fetch_angel(a.symbol, TIMEFRAME_MIN, days))
+    else:
+        df = resample(clean(fetch_1m(a.symbol, days=days)), TIMEFRAME_MIN)
     sessions = sorted(set(df.index.date))
     if not a.include_today and df.index[-1].time() < SQUARE_OFF:
         sessions = sessions[:-1]
@@ -194,7 +203,8 @@ def main():
     tl, lines = report(trades, a.qty, a.cost_pct, a.brokerage)
 
     e_col, m_col = f"ema{ema_ind.LENGTH}", f"ma{ma_ind.LENGTH}"
-    title = (f"TOUFIK EMA {ema_ind.LENGTH} / MA {ma_ind.LENGTH} ({a.ma_type.upper()}) | {a.symbol} "
+    src = "csv" if a.csv else a.source
+    title = (f"TOUFIK EMA {ema_ind.LENGTH} / MA {ma_ind.LENGTH} ({a.ma_type.upper()}) | {a.symbol} [{src}] "
              f"{TIMEFRAME_MIN}m | {window[0]} -> {window[-1]} ({len(window)} sessions)")
     header = (f"{title}\nEntry next open after a crossover, reverse on every opposite crossover, "
               f"SL {a.sl_pct}%, entries until {ENTRY_CUTOFF:%H:%M}, exit by {SQUARE_OFF:%H:%M}.\n")

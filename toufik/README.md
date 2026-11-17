@@ -11,7 +11,7 @@ last 5 sessions (about one week), data from the unofficial `yfinance` API.
 | `indicators/ema.py` | EMA 4 on close (Pine `ta.ema`) |
 | `indicators/ma.py` | MA 10 on close: SMA by default (Pine `ta.sma`), or EMA with `--ma-type ema` |
 | `chart.py` | Interactive HTML chart: candles, EMA 4, MA 10, CE/PE entries, exits, stop-loss exits, stats |
-| `data.py` | Data loader for this strategy: 1-minute yfinance data built into 3-minute candles |
+| `data.py` | Data loader for this strategy: 1-minute yfinance data built into 3-minute candles, or native 3-minute candles from Angel One SmartAPI |
 | `results/` | Output of the last run: `trades.csv`, `summary.txt`, `bars_with_indicators.csv`, `chart.html` |
 
 No Pine source is needed: EMA and SMA are standard TradingView indicators.
@@ -27,6 +27,7 @@ python toufik/strategy.py --sl-pct 0.5                 # stop loss %
 python toufik/strategy.py --ma-type ema                # MA 10 as EMA instead of SMA
 python toufik/strategy.py --qty 500 --brokerage 20 --cost-pct 0.05
 python toufik/strategy.py --day 2026-11-17             # print one day's trades
+python toufik/strategy.py --source angel --out toufik/results_angel   # Angel One candles
 ```
 
 Open `toufik/results/chart.html` in a browser to see the chart.
@@ -36,6 +37,24 @@ Open `toufik/results/chart.html` in a browser to see the chart.
 yfinance has no 3-minute interval, so 1-minute candles are downloaded and grouped into
 3-minute candles starting at 09:15 (09:15, 09:18, …), the same grid TradingView uses for NSE.
 yfinance keeps 1-minute data for about the last 30 days, so `--sessions` can go up to about 20.
+
+## Angel One data (`--source angel`)
+
+Downloads native 3-minute candles from Angel One SmartAPI (`apiconnect.angelone.in`), the
+same candles as the Angel One chart. Login uses your client code, MPIN and a TOTP code
+generated from your TOTP secret. Set these **environment variables** before running;
+never write them into this repository:
+
+```bash
+export ANGEL_API_KEY=...        # SmartAPI app key
+export ANGEL_CLIENT_CODE=...
+export ANGEL_MPIN=...
+export ANGEL_TOTP_SECRET=...    # the base32 secret from the TOTP setup
+python toufik/strategy.py --source angel
+```
+
+Yahoo's 1-minute data can differ from the broker's by a few paise to about ₹1 per candle,
+which can add or remove a crossover. Angel One candles should match the Angel One chart.
 
 ## Rules as implemented
 
