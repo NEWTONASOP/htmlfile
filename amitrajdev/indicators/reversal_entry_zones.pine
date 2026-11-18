@@ -1,0 +1,665 @@
+//@version=6
+indicator("Reversal Entry Zones", shorttitle="Reversal Entry Zones [trade_w_samet]", overlay=true, max_boxes_count=220, max_lines_count=500, max_labels_count=300)
+
+//══════════════════════════════════════════════════════════════════════════════
+// REVERSAL ENTRY ZONES
+// Visual + Settings Professional Update
+//
+// Core workflow:
+// 1) Track running highs and lows from the selected price source
+// 2) Confirm a pivot only when price reverses by a minimum threshold
+// 3) Mark the reversal level as bullish or bearish
+// 4) Draw premium core / outer zones and reversal lines
+// 5) Optionally draw projected zones and synthetic path
+// 6) Display current reversal state in a cleaner dashboard
+//
+// Notes:
+// - Reversals are confirmed only after the selected threshold is reached.
+// - Pivot zones are drawn on the confirmed pivot location.
+// - This script is a structural visualization tool, not an automated system.
+//══════════════════════════════════════════════════════════════════════════════
+
+//══════════════════════════════════════════════════════════════════════════════
+// INPUTS
+//══════════════════════════════════════════════════════════════════════════════
+grpSignal = "⚙️ Confirmation Settings"
+confirmBars = input.int(
+     0,
+     "✅ Extra Confirmation Bars",
+     minval=0,
+     maxval=5,
+     group=grpSignal,
+     tooltip="Adds extra bars before using the high/low source for reversal confirmation. Higher values make signals slower but more conservative.",
+     display=display.none
+)
+
+grpPreset = "🎯 Sensitivity"
+preset = input.string(
+     "Low",
+     "🎚️ Preset",
+     options=["Low", "Very Low"],
+     group=grpPreset,
+     tooltip="Controls reversal sensitivity. Low is more active. Very Low is more selective and requires a larger reversal.",
+     display=display.none
+)
+
+grpCalc = "📏 Reversal Calculation"
+calcMode = input.string(
+     "Average",
+     "📊 Swing Source",
+     options=["Average", "High/Low"],
+     group=grpCalc,
+     tooltip="Average uses EMA-smoothed highs/lows for a cleaner structure. High/Low uses raw candle highs and lows.",
+     display=display.none
+)
+
+avgLen = input.int(
+     5,
+     "📐 Average Length",
+     minval=1,
+     maxval=100,
+     group=grpCalc,
+     tooltip="EMA length used when Swing Source is set to Average.",
+     display=display.none
+)
+
+atrLen = input.int(
+     5,
+     "📏 ATR Length",
+     minval=1,
+     maxval=100,
+     group=grpCalc,
+     tooltip="ATR length used in the reversal threshold and zone sizing model.",
+     display=display.none
+)
+
+customAbs = input.float(
+     0.05,
+     "🧮 Minimum Absolute Reversal",
+     minval=0.0001,
+     step=0.0001,
+     group=grpCalc,
+     tooltip="Minimum absolute movement required before a reversal can be confirmed. This works together with ATR and percentage threshold.",
+     display=display.none
+)
+
+grpZones = "🧱 Zone Display"
+showReversalLabels = input.bool(
+     true,
+     "🏷️ Show Reversal Labels",
+     group=grpZones,
+     tooltip="Shows bullish / bearish reversal labels on confirmed reversal zones.",
+     display=display.none
+)
+
+showZones = input.bool(
+     true,
+     "📦 Show Projected Zones",
+     group=grpZones,
+     tooltip="Shows an additional projected zone extending from the reversal level.",
+     display=display.none
+)
+
+showZoneText = input.bool(
+     false,
+     "✍️ Show Zone Text",
+     group=grpZones,
+     tooltip="Displays text inside projected zones. Turn this off for a cleaner chart.",
+     display=display.none
+)
+
+maxZones = input.int(
+     8,
+     "🧹 Max Projected Zones",
+     minval=1,
+     maxval=50,
+     group=grpZones,
+     tooltip="Maximum number of projected zones kept on the chart.",
+     display=display.none
+)
+
+zoneExtend = input.int(
+     10,
+     "➡️ Zone Extension",
+     minval=5,
+     maxval=200,
+     group=grpZones,
+     tooltip="How many bars projected zones extend to the right.",
+     display=display.none
+)
+
+zoneThicknessPct = input.float(
+     0.03,
+     "📦 Zone Thickness (%)",
+     minval=0.005,
+     maxval=0.5,
+     step=0.005,
+     group=grpZones,
+     tooltip="Projected zone thickness as a percentage of price.",
+     display=display.none
+)
+
+grpLevels = "📍 Reversal Lines"
+levelExtend = input.int(
+     10,
+     "📏 Reversal Line Extension",
+     minval=1,
+     maxval=100,
+     group=grpLevels,
+     tooltip="How many bars reversal lines and core zones extend to the right.",
+     display=display.none
+)
+
+maxLevels = input.int(
+     12,
+     "🧹 Max Reversal Levels",
+     minval=1,
+     maxval=100,
+     group=grpLevels,
+     tooltip="Maximum number of reversal levels, labels, and core zones kept on the chart.",
+     display=display.none
+)
+
+labelSizeOpt = input.string(
+     "Medium",
+     "🔠 Label Size",
+     options=["Small", "Medium", "Large"],
+     group=grpLevels,
+     tooltip="Controls the size of bullish and bearish reversal labels.",
+     display=display.none
+)
+
+useStyledText = input.bool(
+     true,
+     "✨ Premium Label Text",
+     group=grpLevels,
+     tooltip="Uses stronger styled text for bullish and bearish reversal labels.",
+     display=display.none
+)
+
+reversalLineStyleOpt = input.string(
+     "Solid",
+     "📐 Reversal Line Style",
+     options=["Solid", "Dashed", "Dotted"],
+     group=grpLevels,
+     tooltip="Visual style of the main reversal level line.",
+     display=display.none
+)
+
+reversalLineWidth = input.int(
+     3,
+     "📏 Reversal Line Width",
+     minval=1,
+     maxval=5,
+     group=grpLevels,
+     tooltip="Thickness of the main reversal level line.",
+     display=display.none
+)
+
+grpPath = "🧭 Synthetic Path"
+showSyntheticPath = input.bool(
+     false,
+     "🧭 Show Synthetic Path",
+     group=grpPath,
+     tooltip="Connects confirmed reversals with a synthetic path. Disabled by default for a cleaner chart.",
+     display=display.none
+)
+
+syntheticWidth = input.int(
+     1,
+     "📏 Path Width",
+     minval=1,
+     maxval=5,
+     group=grpPath,
+     tooltip="Line width of the synthetic path.",
+     display=display.none
+)
+
+syntheticStyleOpt = input.string(
+     "Dotted",
+     "📐 Path Style",
+     options=["Solid", "Dashed", "Dotted"],
+     group=grpPath,
+     tooltip="Visual style of the synthetic path.",
+     display=display.none
+)
+
+maxSyntheticLines = input.int(
+     40,
+     "🧹 Max Path Segments",
+     minval=5,
+     maxval=200,
+     group=grpPath,
+     tooltip="Maximum number of synthetic path segments kept on the chart.",
+     display=display.none
+)
+
+grpColors = "🎨 Colors"
+bullishColor = input.color(
+     color.rgb(0, 185, 120),
+     "🟢 Bullish Color",
+     group=grpColors,
+     tooltip="Main color used for bullish reversal zones, labels, and lines.",
+     display=display.none
+)
+
+bearishColor = input.color(
+     color.rgb(235, 64, 64),
+     "🔴 Bearish Color",
+     group=grpColors,
+     tooltip="Main color used for bearish reversal zones, labels, and lines.",
+     display=display.none
+)
+
+syntheticColor = input.color(
+     color.rgb(130, 140, 155),
+     "⚪ Synthetic Path Color",
+     group=grpColors,
+     tooltip="Color used for the optional synthetic path.",
+     display=display.none
+)
+
+grpPanel = "🖥️ Status Panel"
+showPanel = input.bool(
+     true,
+     "🖥️ Show Status Panel",
+     group=grpPanel,
+     tooltip="Shows the current reversal state in a clean dashboard.",
+     display=display.none
+)
+
+panelPosition = input.string(
+     "Bottom Right",
+     "📍 Panel Position",
+     options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"],
+     group=grpPanel,
+     tooltip="Position of the status panel on the chart.",
+     display=display.none
+)
+
+panelTextSizeOpt = input.string(
+     "Small",
+     "🔠 Panel Text Size",
+     options=["Tiny", "Small", "Normal"],
+     group=grpPanel,
+     tooltip="Controls dashboard text size.",
+     display=display.none
+)
+
+//══════════════════════════════════════════════════════════════════════════════
+// STYLE
+//══════════════════════════════════════════════════════════════════════════════
+color panelBg       = color.rgb(9, 11, 16)
+color panelBgAlt    = color.rgb(14, 17, 24)
+color panelHeaderBg = color.rgb(20, 24, 34)
+color panelBorder   = color.rgb(45, 52, 66)
+color txtPrimary    = color.rgb(235, 238, 245)
+color txtMuted      = color.rgb(135, 145, 162)
+color neutralColor  = color.rgb(105, 116, 138)
+
+labelSize = switch labelSizeOpt
+    "Small"  => size.small
+    "Medium" => size.normal
+    "Large"  => size.large
+    => size.normal
+
+panelTextSize = switch panelTextSizeOpt
+    "Tiny"   => size.tiny
+    "Small"  => size.small
+    "Normal" => size.normal
+    => size.small
+
+syntheticLineStyle = switch syntheticStyleOpt
+    "Solid"  => line.style_solid
+    "Dashed" => line.style_dashed
+    "Dotted" => line.style_dotted
+    => line.style_dotted
+
+reversalLineStyle = switch reversalLineStyleOpt
+    "Solid"  => line.style_solid
+    "Dashed" => line.style_dashed
+    "Dotted" => line.style_dotted
+    => line.style_solid
+
+getPanelPosition(_pos) =>
+    _pos == "Top Left" ? position.top_left :
+     _pos == "Bottom Right" ? position.bottom_right :
+     _pos == "Bottom Left" ? position.bottom_left :
+     position.top_right
+
+getPremiumLabelText(_bullish) =>
+    useStyledText ? (_bullish ? "𝘽𝙐𝙇𝙇𝙄𝙎𝙃\n𝙍𝙀𝙑𝙀𝙍𝙎𝘼𝙇" : "𝘽𝙀𝘼𝙍𝙄𝙎𝙃\n𝙍𝙀𝙑𝙀𝙍𝙎𝘼𝙇") : (_bullish ? "BULLISH REVERSAL" : "BEARISH REVERSAL")
+
+getZoneText(_bullish) =>
+    showZoneText ? (_bullish ? "BULLISH ZONE" : "BEARISH ZONE") : ""
+
+//══════════════════════════════════════════════════════════════════════════════
+// STORAGE
+//══════════════════════════════════════════════════════════════════════════════
+var array<line> reversalLines  = array.new<line>()
+var array<line> glowLines      = array.new<line>()
+var array<line> syntheticLines = array.new<line>()
+var array<box>  coreBoxes      = array.new<box>()
+var array<box>  outerBoxes     = array.new<box>()
+var array<box>  zoneBoxes      = array.new<box>()
+var array<label> reversalLabels = array.new<label>()
+
+var int   lastReversalDir   = 0
+var float lastReversalPrice = na
+var int   lastReversalBar   = na
+
+var int   prevPathBar   = na
+var float prevPathPrice = na
+
+//══════════════════════════════════════════════════════════════════════════════
+// SENSITIVITY MODEL
+//══════════════════════════════════════════════════════════════════════════════
+presetATR = switch preset
+    "Low"      => 2.8
+    "Very Low" => 3.5
+    => 2.8
+
+presetPct = switch preset
+    "Low"      => 0.015
+    "Very Low" => 0.02
+    => 0.015
+
+atrNow = ta.atr(atrLen)
+reversalThreshold = math.max(close * presetPct / 100.0, math.max(customAbs, presetATR * atrNow))
+
+//══════════════════════════════════════════════════════════════════════════════
+// PRICE STREAMS
+//══════════════════════════════════════════════════════════════════════════════
+hiBase = calcMode == "High/Low" ? high : ta.ema(high, avgLen)
+loBase = calcMode == "High/Low" ? low  : ta.ema(low, avgLen)
+
+hiRef    = hiBase[confirmBars]
+loRef    = loBase[confirmBars]
+hiRawRef = high[confirmBars]
+loRawRef = low[confirmBars]
+
+//══════════════════════════════════════════════════════════════════════════════
+// CONFIRMED PIVOT ENGINE
+//══════════════════════════════════════════════════════════════════════════════
+var float runHigh = na
+var float runLow = na
+var float runHighRaw = na
+var float runLowRaw = na
+var int runHighBar = na
+var int runLowBar = na
+var int swingDir = 1
+
+var float confirmedPivot = na
+var float confirmedPivotRaw = na
+var int confirmedPivotBar = na
+var bool confirmedPivotIsHigh = false
+bool pivotReady = false
+
+if not na(hiRef) and not na(loRef)
+    if na(runHigh) or na(runLow)
+        runHigh := hiRef
+        runLow := loRef
+        runHighRaw := hiRawRef
+        runLowRaw := loRawRef
+        runHighBar := bar_index - confirmBars
+        runLowBar := bar_index - confirmBars
+        swingDir := 1
+
+    if swingDir == 1
+        if hiRef > runHigh
+            runHigh := hiRef
+            runHighRaw := hiRawRef
+            runHighBar := bar_index - confirmBars
+
+        if runHigh - loRef >= reversalThreshold
+            confirmedPivot := runHigh
+            confirmedPivotRaw := runHighRaw
+            confirmedPivotBar := runHighBar
+            confirmedPivotIsHigh := true
+            pivotReady := true
+
+            swingDir := -1
+            runLow := loRef
+            runLowRaw := loRawRef
+            runLowBar := bar_index - confirmBars
+    else
+        if loRef < runLow
+            runLow := loRef
+            runLowRaw := loRawRef
+            runLowBar := bar_index - confirmBars
+
+        if hiRef - runLow >= reversalThreshold
+            confirmedPivot := runLow
+            confirmedPivotRaw := runLowRaw
+            confirmedPivotBar := runLowBar
+            confirmedPivotIsHigh := false
+            pivotReady := true
+
+            swingDir := 1
+            runHigh := hiRef
+            runHighRaw := hiRawRef
+            runHighBar := bar_index - confirmBars
+
+//══════════════════════════════════════════════════════════════════════════════
+// REVERSAL MODULE
+//══════════════════════════════════════════════════════════════════════════════
+bool bullishReversalSignal = pivotReady and not confirmedPivotIsHigh
+bool bearishReversalSignal = pivotReady and confirmedPivotIsHigh
+
+if pivotReady
+    bool isBullishReversal = not confirmedPivotIsHigh
+    float centerPrice = confirmedPivotRaw
+
+    lastReversalDir := isBullishReversal ? 1 : -1
+    lastReversalPrice := centerPrice
+    lastReversalBar := confirmedPivotBar
+
+    float coreHalf  = math.max(atrNow * 0.12, math.abs(centerPrice) * 0.00015)
+    float outerHalf = coreHalf * 2.15
+
+    color baseCol = isBullishReversal ? bullishColor : bearishColor
+    color textCol = color.white
+
+    box outerBox = box.new(
+         confirmedPivotBar,
+         centerPrice + outerHalf,
+         confirmedPivotBar + levelExtend,
+         centerPrice - outerHalf,
+         xloc=xloc.bar_index,
+         bgcolor=color.new(baseCol, 94),
+         border_color=color.new(baseCol, 72),
+         border_width=1
+     )
+    array.push(outerBoxes, outerBox)
+
+    box coreBox = box.new(
+         confirmedPivotBar,
+         centerPrice + coreHalf,
+         confirmedPivotBar + levelExtend,
+         centerPrice - coreHalf,
+         xloc=xloc.bar_index,
+         bgcolor=color.new(baseCol, 84),
+         border_color=color.new(baseCol, 24),
+         border_width=2
+     )
+    array.push(coreBoxes, coreBox)
+
+    if showReversalLabels
+        string labelTxt = getPremiumLabelText(isBullishReversal)
+        string labelTooltip = isBullishReversal ? "Bullish reversal zone confirmed after price moved away from the confirmed low pivot." : "Bearish reversal zone confirmed after price moved away from the confirmed high pivot."
+
+        label reversalLabel = label.new(
+             confirmedPivotBar,
+             isBullishReversal ? centerPrice - outerHalf : centerPrice + outerHalf,
+             labelTxt,
+             style=isBullishReversal ? label.style_label_up : label.style_label_down,
+             color=color.new(baseCol, 8),
+             textcolor=textCol,
+             size=labelSize,
+             xloc=xloc.bar_index,
+             tooltip=labelTooltip
+         )
+        array.push(reversalLabels, reversalLabel)
+
+    line glowLine = line.new(
+         confirmedPivotBar,
+         centerPrice,
+         confirmedPivotBar + levelExtend,
+         centerPrice,
+         xloc=xloc.bar_index,
+         extend=extend.none,
+         color=color.new(baseCol, 84),
+         width=8,
+         style=line.style_solid
+     )
+    array.push(glowLines, glowLine)
+
+    line reversalLine = line.new(
+         confirmedPivotBar,
+         centerPrice,
+         confirmedPivotBar + levelExtend,
+         centerPrice,
+         xloc=xloc.bar_index,
+         extend=extend.none,
+         color=color.new(baseCol, 0),
+         width=reversalLineWidth,
+         style=reversalLineStyle
+     )
+    array.push(reversalLines, reversalLine)
+
+    if showZones
+        float zoneHalf = (centerPrice * zoneThicknessPct / 100.0) / 2.0
+        box zoneBox = box.new(
+             confirmedPivotBar,
+             centerPrice + zoneHalf,
+             confirmedPivotBar + zoneExtend,
+             centerPrice - zoneHalf,
+             xloc=xloc.bar_index,
+             bgcolor=color.new(baseCol, 89),
+             border_color=color.new(baseCol, 34),
+             border_width=1,
+             text=getZoneText(isBullishReversal),
+             text_color=color.new(txtPrimary, 0),
+             text_size=size.tiny,
+             text_halign=text.align_center,
+             text_valign=text.align_center
+         )
+        array.push(zoneBoxes, zoneBox)
+
+    if showSyntheticPath and not na(prevPathBar) and not na(prevPathPrice)
+        line syntheticLine = line.new(
+             prevPathBar,
+             prevPathPrice,
+             confirmedPivotBar,
+             centerPrice,
+             xloc=xloc.bar_index,
+             extend=extend.none,
+             color=color.new(syntheticColor, 18),
+             width=syntheticWidth,
+             style=syntheticLineStyle
+         )
+        array.push(syntheticLines, syntheticLine)
+
+    prevPathBar := confirmedPivotBar
+    prevPathPrice := centerPrice
+
+//══════════════════════════════════════════════════════════════════════════════
+// STATUS DATA
+//══════════════════════════════════════════════════════════════════════════════
+int barsSinceLastReversal = na(lastReversalBar) ? na : bar_index - lastReversalBar
+string barsSinceText = na(barsSinceLastReversal) ? "—" : str.tostring(barsSinceLastReversal)
+string lastSignalText = lastReversalDir == 0 ? "Waiting" : lastReversalDir == 1 ? "Bullish Reversal" : "Bearish Reversal"
+string lastPriceText = na(lastReversalPrice) ? "—" : str.tostring(lastReversalPrice, format.mintick)
+string trackingText = swingDir == 1 ? "Bearish Setup" : "Bullish Setup"
+string sourceText = calcMode == "High/Low" ? "High / Low" : "Average"
+string thresholdText = str.tostring(reversalThreshold, format.mintick)
+string activeZonesText = str.tostring(array.size(zoneBoxes))
+string presetText = preset
+string pathText = showSyntheticPath ? "Visible" : "Hidden"
+
+color statusAccent = lastReversalDir == 0 ? neutralColor : lastReversalDir == 1 ? bullishColor : bearishColor
+color statusBg = lastReversalDir == 0 ? color.rgb(32, 39, 52) : lastReversalDir == 1 ? color.new(bullishColor, 84) : color.new(bearishColor, 84)
+
+//══════════════════════════════════════════════════════════════════════════════
+// STATUS PANEL
+//══════════════════════════════════════════════════════════════════════════════
+var table panel = table.new(
+     getPanelPosition(panelPosition),
+     2,
+     7,
+     frame_color=color.new(panelBorder, 0),
+     frame_width=1,
+     border_width=1,
+     border_color=color.new(panelBorder, 25)
+)
+
+if barstate.islast
+    table.clear(panel, 0, 0, 1, 6)
+
+    if showPanel
+        table.cell(panel, 0, 0, "REVERSAL ENGINE", text_color=txtPrimary, text_size=panelTextSize, text_halign=text.align_left, bgcolor=panelHeaderBg)
+        table.cell(panel, 1, 0, "STATUS", text_color=statusAccent, text_size=panelTextSize, text_halign=text.align_center, bgcolor=panelHeaderBg)
+
+        table.cell(panel, 0, 1, "Last Signal", text_color=txtMuted, text_size=panelTextSize, text_halign=text.align_left, bgcolor=panelBg)
+        table.cell(panel, 1, 1, lastSignalText, text_color=txtPrimary, text_size=panelTextSize, text_halign=text.align_center, bgcolor=statusBg)
+
+        table.cell(panel, 0, 2, "Signal Price", text_color=txtMuted, text_size=panelTextSize, text_halign=text.align_left, bgcolor=panelBgAlt)
+        table.cell(panel, 1, 2, lastPriceText, text_color=statusAccent, text_size=panelTextSize, text_halign=text.align_center, bgcolor=panelBgAlt)
+
+        table.cell(panel, 0, 3, "Bars Since", text_color=txtMuted, text_size=panelTextSize, text_halign=text.align_left, bgcolor=panelBg)
+        table.cell(panel, 1, 3, barsSinceText, text_color=txtPrimary, text_size=panelTextSize, text_halign=text.align_center, bgcolor=panelBg)
+
+        table.cell(panel, 0, 4, "Tracking", text_color=txtMuted, text_size=panelTextSize, text_halign=text.align_left, bgcolor=panelBgAlt)
+        table.cell(panel, 1, 4, trackingText, text_color=txtPrimary, text_size=panelTextSize, text_halign=text.align_center, bgcolor=panelBgAlt)
+
+        table.cell(panel, 0, 5, "Sensitivity / Source", text_color=txtMuted, text_size=panelTextSize, text_halign=text.align_left, bgcolor=panelBg)
+        table.cell(panel, 1, 5, presetText + " / " + sourceText, text_color=txtPrimary, text_size=panelTextSize, text_halign=text.align_center, bgcolor=panelBg)
+
+        table.cell(panel, 0, 6, "Zones / Path", text_color=txtMuted, text_size=panelTextSize, text_halign=text.align_left, bgcolor=panelBgAlt)
+        table.cell(panel, 1, 6, activeZonesText + " / " + pathText, text_color=txtPrimary, text_size=panelTextSize, text_halign=text.align_center, bgcolor=panelBgAlt)
+
+//══════════════════════════════════════════════════════════════════════════════
+// CLEANUP
+//══════════════════════════════════════════════════════════════════════════════
+while array.size(reversalLines) > maxLevels
+    line oldReversal = array.shift(reversalLines)
+    line.delete(oldReversal)
+
+while array.size(glowLines) > maxLevels
+    line oldGlow = array.shift(glowLines)
+    line.delete(oldGlow)
+
+while array.size(syntheticLines) > maxSyntheticLines
+    line oldSynthetic = array.shift(syntheticLines)
+    line.delete(oldSynthetic)
+
+while array.size(coreBoxes) > maxLevels
+    box oldCore = array.shift(coreBoxes)
+    box.delete(oldCore)
+
+while array.size(outerBoxes) > maxLevels
+    box oldOuter = array.shift(outerBoxes)
+    box.delete(oldOuter)
+
+while array.size(zoneBoxes) > maxZones
+    box oldZone = array.shift(zoneBoxes)
+    box.delete(oldZone)
+
+while array.size(reversalLabels) > maxLevels
+    label oldLabel = array.shift(reversalLabels)
+    label.delete(oldLabel)
+
+//══════════════════════════════════════════════════════════════════════════════
+// ALERTS
+//══════════════════════════════════════════════════════════════════════════════
+alertcondition(
+     bullishReversalSignal,
+     title="Bullish Reversal Zone Confirmed",
+     message="Bullish reversal zone confirmed on {{ticker}} / {{interval}}."
+)
+
+alertcondition(
+     bearishReversalSignal,
+     title="Bearish Reversal Zone Confirmed",
+     message="Bearish reversal zone confirmed on {{ticker}} / {{interval}}."
+)
