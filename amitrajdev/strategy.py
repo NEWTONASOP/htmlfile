@@ -10,9 +10,10 @@ Conditions (evaluated on each completed 5-minute candle):
   4. Smoothed Heiken Ashi v1   BUY: candle Green              SELL: candle Red
 Entry : all 4 newly aligned on a candle close (not aligned on the previous candle) and no
         open position -> enter at the next candle open. Entries up to the 15:00 candle open.
-Exit  : BUY when 2+ conditions are bearish (SELL: bullish) on a candle close -> exit at the
-        next open (--exit-count now, default). --exit-count since-entry counts every
-        condition that has turned against the trade since entry. No reverse entry.
+Exit  : exit at the next open once 2+ conditions have turned against the trade (bearish for
+        a BUY, bullish for a SELL) at any candle close since entry, even if one turned back
+        (--exit-count since-entry, default, confirmed by the client). --exit-count now needs
+        2+ against on the same close. No reverse entry.
 Risk  : quantity 1, no stop loss, square-off 15:15. Signals are not carried overnight.
 
 Usage:
@@ -86,7 +87,7 @@ class Trade:
         return (self.exit - self.entry) if self.side == "BUY" else (self.entry - self.exit)
 
 
-def run(df: pd.DataFrame, start_date, exit_count: str = "now") -> list[Trade]:
+def run(df: pd.DataFrame, start_date, exit_count: str = "since-entry") -> list[Trade]:
     idx, dates = df.index, df.index.date
     O, C = df["Open"].to_numpy(), df["Close"].to_numpy()
     conds = df[[f"c_{c}" for c in COND_NAMES]].to_numpy()
@@ -187,7 +188,7 @@ def main():
     ap.add_argument("--csv", help="load 5m OHLC from CSV instead of yfinance")
     ap.add_argument("--sessions", type=int, default=5, help="trading sessions to backtest (5 = one week)")
     ap.add_argument("--include-today", action="store_true")
-    ap.add_argument("--exit-count", choices=["now", "since-entry"], default="now",
+    ap.add_argument("--exit-count", choices=["now", "since-entry"], default="since-entry",
                     help="now: 2+ conditions against the trade on the same close; "
                          "since-entry: 2+ conditions that turned against it at any time since entry")
     ap.add_argument("--qty", type=int, default=QTY)

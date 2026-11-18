@@ -26,7 +26,7 @@ pip install -r requirements.txt
 python amitrajdev/strategy.py                      # RELIANCE.NS, last 5 sessions
 python amitrajdev/strategy.py --sessions 40        # about 2 months
 python amitrajdev/strategy.py --day 2026-11-17     # print one day's trades
-python amitrajdev/strategy.py --exit-count since-entry
+python amitrajdev/strategy.py --exit-count now          # same-close exit variant
 ```
 
 ## The 4 conditions (checked on every completed 5-minute candle)
@@ -56,8 +56,8 @@ python amitrajdev/strategy.py --exit-count since-entry
 |---|---|
 | Entry | All 4 conditions BUY (or all 4 SELL) on a candle close **and not all 4 on the previous candle** (newly aligned), with no open position → enter at the **next candle open** |
 | Re-entry | After an exit, a new entry needs the 4 conditions to newly align again |
-| Exit (default `--exit-count now`) | BUY: exit at the next open when **2 or more conditions are SELL on the same candle close** (SELL: 2+ BUY). The exit reason lists which ones |
-| Exit (`--exit-count since-entry`) | Counts every condition that has turned against the trade at any close since entry, even if it turned back |
+| Exit (default `--exit-count since-entry`, confirmed) | BUY: exit at the next open once **2 or more conditions have turned SELL at any candle close since entry**, even if one turned back to BUY (SELL: 2+ turned BUY). The exit reason lists which ones |
+| Exit (`--exit-count now`) | Alternative: 2 or more conditions against the trade on the same candle close |
 | Reverse | No automatic reverse entry after an exit |
 | Position | One open position at a time, quantity 1, **no stop loss** |
 | Last entry | Entry candle may open at **15:00** at the latest (signal on the 14:55 candle) |
