@@ -36,14 +36,14 @@ histogram crossing 0.
 |---|---|
 | Timeframe | 2-minute candles (`--interval 5m` for 5-minute) |
 | Indicators | SMA 20 of High, SMA 20 of Low, MACD 12/26/9 on close |
-| CALL setup candle | Green, **more than 50% of its body above SMA 20 High**, and a **bullish MACD crossover** (MACD crossing above its signal line) on this candle or the 2 candles before it, with MACD still above signal |
-| PUT setup candle | Red, more than 50% of its body below SMA 20 Low, and a bearish crossover on this candle or the 2 before it, with MACD still below signal |
+| CALL setup candle | Green, **more than 50% of its body above SMA 20 High**, and a **bullish MACD crossover** (MACD crossing above its signal line) **on this same candle** |
+| PUT setup candle | Red, more than 50% of its body below SMA 20 Low, and a bearish crossover **on this same candle** |
 | Entry | **Next candle only**: CALL fills when price breaks above the setup high (at the open if it gaps above it). PUT fills on a break below the setup low |
 | Trading time | Entry candle between 09:45 and 14:20 (last 2m entry candle 14:18–14:20). Trades already open are held until 15:15 |
-| Stop loss | CALL: SMA 20 Low on the setup candle. PUT: SMA 20 High. Fixed until T1 |
-| T1 | 1:1 of the initial risk: book **50%** and move SL to **cost** |
-| Trail | After T1, at each candle close the SL follows SMA 20 Low (CALL) or SMA 20 High (PUT), only ever tightening and never past cost |
-| Exit | SL / cost / trailing SL, otherwise squared off at 15:15 |
+| Stop loss | CALL: **SMA 20 Low**, PUT: **SMA 20 High**, following the line: each candle's SL is the line's value at the previous close (the setup candle's value for the entry candle) |
+| T1 | 1:1 of the risk at entry (entry to the SL at entry): book **50%** and move the SL to **cost** (cost-to-cost) |
+| After T1 | The SL stays at cost; no further trailing |
+| Exit | SL, or cost stop after T1, otherwise squared off at 15:15 |
 | Same candle hits SL and target | SL counted first (conservative) |
 | Qualifying vs entry candle | The **qualifying (setup) candle** is the one with 50%+ of its body beyond the SMA and the MACD crossover. The **entry candle** is the next one, which must break the setup candle's high (CALL) or low (PUT). `setup_time` and `entry_time` in the output |
 | CALL vs PUT | Independent trades, one open per side (`--one-at-a-time` allows a single position) |

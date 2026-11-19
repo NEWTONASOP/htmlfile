@@ -6,14 +6,16 @@ Indicators : SMA 20 of High, SMA 20 of Low, MACD (TradingView built-in: EMA 12 -
              of close, signal = EMA 9 of MACD, crossover = histogram crossing 0).
              See laxit/indicators/ (Python ports + original Pine source).
 CALL setup : green candle, more than 50% of its body above SMA20 High, and a bullish
-             MACD crossover on this candle or the 2 before it (MACD still above signal).
-PUT setup  : red candle, more than 50% of its body below SMA20 Low, bearish crossover
-             on this candle or the 2 before it (MACD still below signal).
+             MACD crossover on this same candle.
+PUT setup  : red candle, more than 50% of its body below SMA20 Low, and a bearish MACD
+             crossover on this same candle.
 Entry      : only the next candle; CALL on a break above the setup high, PUT on a break
              below the setup low. Entries 09:45 - 14:20 IST.
-Stop loss  : CALL = SMA20 Low, PUT = SMA20 High (value on the setup candle).
-Management : at 1:1 book 50%, move SL to cost, then trail the rest with the SMA line
-             (CALL: SMA20 Low, PUT: SMA20 High), never loosening. Forced exit 15:15.
+Stop loss  : CALL = SMA20 Low, PUT = SMA20 High. The SL follows the SMA line: each candle
+             uses the line's value at the previous close (the setup candle for the entry
+             candle).
+Management : 1:1 is measured from the SL at entry. At 1:1 book 50% and move the SL to cost
+             (cost-to-cost); no further trailing. Forced exit 15:15.
 
 Usage:
     python laxit/strategy.py                        # RELIANCE.NS 2m, last 5 complete sessions
@@ -39,7 +41,7 @@ sys.path.insert(0, str(HERE))  # this strategy folder only
 from data import fetch_yf, load_csv, clean  # noqa: E402
 from indicators import macd as macd_ind, sma_bands  # noqa: E402
 
-CROSS_LOOKBACK = 3            # crossover on the setup candle or the 2 before it
+CROSS_LOOKBACK = 1            # crossover on the setup candle itself
 BODY_BEYOND = 0.5             # more than 50% of the body beyond the SMA
 ENTRY_START = time(9, 45)     # entry candle may start at 09:45 ...
 ENTRY_END = time(14, 20)      # ... and must end by 14:20
@@ -131,7 +133,7 @@ def run(df: pd.DataFrame, start_date, independent: bool = True) -> list[Trade]:
                 elif abs(t.sl - t.entry) < 1e-9:
                     reason = "T1 + cost stop"
                 else:
-                    reason = "T1 + trailing SL"
+                    reason = "T1 + SL"
                 close(t, ts, px, reason)
                 continue
             if t.t1_time is None and (H[i] >= t.target if call else L[i] <= t.target):
@@ -141,9 +143,10 @@ def run(df: pd.DataFrame, start_date, independent: bool = True) -> list[Trade]:
             if end >= SQUARE_OFF or last_of_day:
                 close(t, ts, C[i], "T1 + square-off" if t.t1_time else "Square-off 15:15")
                 continue
-            # 4) trail at candle close, only after T1, never loosen
-            if t.t1_time is not None:
-                t.sl = max(t.sl, SMAL[i]) if call else min(t.sl, SMAH[i])
+            # 4) before 1:1 the SL follows the SMA line (value at this close, used from the
+            #    next candle); after 1:1 it stays at cost
+            if t.t1_time is None:
+                t.sl = float(SMAL[i]) if call else float(SMAH[i])
     return done
 
 
@@ -218,7 +221,8 @@ def main():
     mode = "one trade at a time" if a.one_at_a_time else "CALL & PUT independent"
     header = (f"LAXIT ({mode}) | {a.symbol} {a.interval} | {window[0]} -> {window[-1]} ({len(window)} sessions)\n"
               f"SMA{sma_bands.LENGTH} High/Low, MACD {macd_ind.FAST}/{macd_ind.SLOW}/{macd_ind.SIGNAL}, crossover within "
-              f"{CROSS_LOOKBACK} candles, entries {ENTRY_START:%H:%M}-{ENTRY_END:%H:%M}, "
+              f"{CROSS_LOOKBACK} candle(s), SL on the moving SMA line, 50% at 1:1 then cost, "
+              f"entries {ENTRY_START:%H:%M}-{ENTRY_END:%H:%M}, "
               f"exit by {SQUARE_OFF:%H:%M}. P&L counts 50% at T1 + 50% at final exit.\n")
     os.makedirs(a.out, exist_ok=True)
     tl.to_csv(os.path.join(a.out, "trades.csv"), index=False)
