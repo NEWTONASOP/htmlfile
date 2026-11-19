@@ -12,7 +12,7 @@ TradingView Pine source where one was provided.
 | LAXIT – SMA 20 High/Low + MACD | [`laxit/`](laxit/README.md) | 5m (2m option) | SMA 20 High/Low, MACD |
 | Rakesh Rattan – EMA Crossover | [`rakesh/`](rakesh/README.md) | 5m | EMA 15/30/35/40/45/50/60 |
 | TOUFIK – EMA 4 / MA 10 | [`toufik/`](toufik/README.md) | 3m | EMA 4, MA 10 (SMA) |
-| ASHISHKUMARVERMA – ORB | [`ashishkumarverma/`](ashishkumarverma/README.md) | 15m levels, 1m breakout | ORB candle, alert candle |
+| ASHISHKUMARVERMA – ORB | [`ashishkumarverma/`](ashishkumarverma/README.md) | 15m levels, 1m breakout | Opening/alert candle, RVOL 20, gap filter, 9 EMA exit |
 | AMIT RAJDEV – 5-min Reversal | [`amitrajdev/`](amitrajdev/README.md) | 5m | SMA 120, LuxAlgo Pivots, Reversal Entry Zones, Smoothed Heiken Ashi |
 
 ```
@@ -41,7 +41,7 @@ ashishkumarverma/
   README.md
   strategy.py
   data.py
-  indicators/  orb.py
+  indicators/  orb.py  rvol.py  ema.py
 amitrajdev/
   README.md
   strategy.py
