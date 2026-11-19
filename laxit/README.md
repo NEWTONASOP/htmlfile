@@ -7,7 +7,7 @@ SMA 20 Low and MACD. Default: `RELIANCE.NS`, last 1 week (5 sessions), data from
 
 | File | What it is |
 |---|---|
-| `strategy.py` | Backtest: setups, entries, stop loss, 50% booking, trailing, report |
+| `strategy.py` | Backtest: setups, entries, stop loss, 50% booking at 1:1, cost stop, report |
 | `indicators/sma_bands.py` | SMA 20 of High and SMA 20 of Low (simple, `ta.sma`) |
 | `indicators/macd.py` | MACD 12/26/9 and crossovers (Python port of the built-in) |
 | `indicators/macd.pine` | TradingView built-in MACD Pine source |
