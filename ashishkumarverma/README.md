@@ -10,9 +10,9 @@ Strategy only (no chart or dashboard).
 |---|---|
 | `strategy.py` | Backtest: filters, alert candle, breakout entry, capped stop loss, 9 EMA exit, square-off, report |
 | `indicators/orb.py` | Opening candle (09:15–09:30), gap, and the alert candle for each day |
-| `indicators/rvol.py` | RVOL, length 20 (relative volume) |
+| `indicators/rvol.py` | RVOL, length 20: candle volume vs the same 15-minute slot over the previous 20 days |
 | `indicators/ema.py` | 9 EMA of the 15-minute closes |
-| `data.py` | Data loader: 1-minute yfinance OHLCV, grouped into 15-minute candles |
+| `data.py` | Data loader: 1-minute yfinance OHLCV (grouped into 15-minute candles) and Yahoo's 15-minute bars for the RVOL history |
 | `results/` | Output of the last run: `days.csv` (filters and setup per day), `trades.csv`, `summary.txt` |
 
 ## Run
@@ -29,19 +29,21 @@ python ashishkumarverma/strategy.py --min-rvol 1.5 --max-gap-pct 2 --max-sl-pct 
 
 RVOL needs volume, so use a **stock**. Index symbols such as `^NSEI` have no volume on Yahoo.
 
-## Data: 1-minute candles only, 15-minute built from them
+## Data
 
-Only **1-minute** OHLCV candles are downloaded. The 15-minute candles are **built in the
-code** from them (Open = first open, High = highest high, Low = lowest low, Close = last
-close, Volume = sum), on the 09:15, 09:30, … grid.
+| Candles | Source | Used for |
+|---|---|---|
+| 1-minute | Downloaded from yfinance (about the last 30 days) | Breakout minute, entry price (that minute's close), stop loss, 15:00 square-off |
+| 15-minute | **Built** from the 1-minute candles (Open = first open, High = highest high, Low = lowest low, Close = last close), on the 09:15, 09:30, … grid | Opening candle, alert candle, 9 EMA and the 9 EMA exit |
+| 15-minute | Downloaded from yfinance (about the last 60 days) | RVOL (candle volume and its 20-day slot history) and the previous day's close for the gap |
 
-| Candles | Used for |
-|---|---|
-| 1-minute (downloaded) | Finding the breakout minute, the entry price (that minute's close), the stop loss and the 15:00 square-off |
-| 15-minute (built) | Opening candle, alert candle, RVOL, 9 EMA and the 9 EMA exit |
+Because RVOL needs 20 earlier days of the same time slot, it uses Yahoo's 15-minute bars,
+which go back about 60 days; both the candle volume and its average come from that one
+source. Their prices match the candles built from 1-minute data. Yahoo's 09:15 volume is
+lower than the sum of its 1-minute candles (the 1-minute data likely includes the pre-open
+auction), which is why one source is used for both parts of the ratio.
 
-yfinance keeps 1-minute data for about the last 30 days, so `--sessions` can go up to about
-20. The oldest day in the data has no earlier candles for RVOL and is skipped.
+`--sessions` can go up to about 20 (the 1-minute data limit).
 
 ## Rules as implemented
 
@@ -49,8 +51,8 @@ yfinance keeps 1-minute data for about the last 30 days, so `--sessions` can go 
 |---|---|---|
 | 1 | Timeframe | 15-minute candles for levels, filters and the EMA exit |
 | 2 | Opening candle | 09:15–09:30: **Opening High** and **Opening Low** |
-| 3 | RVOL filter | RVOL(20) **≥ 1.5 on both the opening candle and the alert candle**, otherwise no trade. RVOL = candle volume ÷ average volume of the last 20 fifteen-minute candles (including this one), continuing across days. FYERS does not publish its formula; this is the standard definition |
-| 4 | Gap filter | 09:15 open vs the previous day's close: **more than 2%** up or down = no trade (exactly 2% still trades) |
+| 3 | RVOL filter | RVOL(20) **≥ 1.5 on both the opening candle and the alert candle**, otherwise no trade. RVOL = candle volume ÷ **average volume of the same 15-minute time slot over the previous 20 trading days** (e.g. today's 09:15 candle vs the last 20 days' 09:15 candles; today not included), as confirmed for FYERS. `--rvol-mode candles` uses the last 20 candles instead |
+| 4 | Gap filter | 09:15 open vs the previous day's close (from the 15-minute data): **more than 2%** up or down = no trade (exactly 2% still trades) |
 | 5 | F&O ban | Not applied (dashboard item) |
 | 6 | Alert candle | The **first** 15-minute candle after 09:30, at any time of day, that **closes above Opening High** (CE) or **below Opening Low** (PE). The first such close decides the direction. Its high / low are the breakout levels |
 | 7 | Entry | Any time after the alert candle closes (not necessarily the next candle): the first 1-minute candle that trades **above Alert High** (CE) or **below Alert Low** (PE). Filled at that minute's **close**. **No entry from 13:30** |

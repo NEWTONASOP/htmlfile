@@ -4,7 +4,8 @@ ASHISHKUMARVERMA - ORB strategy backtest (updated spec), NSE intraday, spot pric
 
 Levels   : 15-minute candles. Opening candle 09:15-09:30 -> Opening High / Low.
 Filters  : no trade if |gap| > 2% (09:15 open vs previous close), or RVOL(20) < 1.5 on the
-           opening candle or on the alert candle.
+           opening candle or on the alert candle. RVOL = candle volume / average volume of
+           the same 15-minute slot over the previous 20 trading days (FYERS, option B).
 Alert    : the first 15-minute candle (any time) that CLOSES above Opening High (CE) or
            below Opening Low (PE). Its high / low are the breakout levels.
 Entry    : any time after the alert candle closes, the first 1-minute candle that breaks
@@ -33,9 +34,9 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))  # this strategy folder only
-from data import fetch_1m, load_csv, clean, resample  # noqa: E402
+from data import fetch_1m, fetch_15m, load_csv, clean, resample  # noqa: E402
 from indicators.orb import day_levels  # noqa: E402
-from indicators.rvol import rvol, LENGTH as RVOL_LEN, MIN_RVOL  # noqa: E402
+from indicators.rvol import rvol_slot, rvol_rolling, LENGTH as RVOL_LEN, MIN_RVOL  # noqa: E402
 from indicators.ema import ema, LENGTH as EMA_LEN  # noqa: E402
 
 LAST_ENTRY = "13:30"        # a breakout minute must start before this
@@ -134,6 +135,9 @@ def main():
     ap.add_argument("--sessions", type=int, default=5, help="trading days to backtest (max ~20)")
     ap.add_argument("--include-today", action="store_true")
     ap.add_argument("--min-rvol", type=float, default=MIN_RVOL)
+    ap.add_argument("--rvol-mode", choices=["slot", "candles"], default="slot",
+                    help="slot: same time slot over the previous 20 days (default); "
+                         "candles: average of the last 20 candles")
     ap.add_argument("--max-gap-pct", type=float, default=MAX_GAP_PCT)
     ap.add_argument("--max-sl-pct", type=float, default=MAX_SL_PCT)
     ap.add_argument("--last-entry", default=LAST_ENTRY, help="no entry from this time (HH:MM)")
@@ -149,21 +153,24 @@ def main():
         m1 = m1[m1.index.date <= sessions[-1]]
     window = sessions[-a.sessions:]
 
-    c15 = resample(m1, 15)                      # all fetched days: warm-up for RVOL and EMA
-    c15["rvol"] = rvol(c15)
+    c15 = resample(m1, 15)                      # all fetched days: warm-up for the EMA
     c15["ema"] = ema(c15)
+    # RVOL from Yahoo's 15-minute bars (60 days), so every tested day has 20 days of history
+    vol15 = c15 if a.csv else clean(fetch_15m(a.symbol))
+    rv = rvol_slot(vol15) if a.rvol_mode == "slot" else rvol_rolling(vol15)
+    c15["rvol"] = rv.reindex(c15.index)
 
     days, trades = [], []
     for day in window:
-        prev_days = [s for s in sessions if s < day]
-        prev_close = float(m1[m1.index.date == prev_days[-1]].Close.iloc[-1]) if prev_days else float("nan")
+        prev = vol15[vol15.index.date < day]           # 15m history reaches further back than 1m
+        prev_close = float(prev.Close.iloc[-1]) if len(prev) else float("nan")
         lv = day_levels(c15[c15.index.date == day], prev_close)
         lv["date"] = day
         reason = None
         if lv.get("open_high") is None:
             reason = lv["note"]
         elif lv["open_rvol"] != lv["open_rvol"] or lv["gap_pct"] != lv["gap_pct"]:
-            reason = f"Not enough history for RVOL({RVOL_LEN}) / gap (first day of the data)"
+            reason = f"Not enough history for RVOL({RVOL_LEN}) / gap"
         elif abs(lv["gap_pct"]) > a.max_gap_pct:
             reason = f"Gap {lv['gap_pct']:+.2f}% beyond {a.max_gap_pct}%"
         elif not lv["open_rvol"] >= a.min_rvol:
@@ -195,7 +202,8 @@ def main():
             tl[col] = tl[col].astype(float).round(2)
 
     header = (f"ASHISHKUMARVERMA ORB (updated) | {a.symbol} | {window[0]} -> {window[-1]} ({len(window)} sessions)\n"
-              f"Gap <= {a.max_gap_pct}%, RVOL({RVOL_LEN}) >= {a.min_rvol} on opening and alert candles, "
+              f"Gap <= {a.max_gap_pct}%, RVOL({RVOL_LEN}, {'same slot, 20 days' if a.rvol_mode == 'slot' else 'last 20 candles'}) "
+              f">= {a.min_rvol} on opening and alert candles, "
               f"entry on 1m break until {a.last_entry}, SL alert candle capped {a.max_sl_pct}%, "
               f"exit on 15m close across EMA {EMA_LEN} / SL / square-off {SQUARE_OFF:%H:%M}"
               f"{f', target 1:{a.rr:g}' if a.rr else ', no fixed target'}.\n")
