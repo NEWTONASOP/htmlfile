@@ -22,8 +22,7 @@ Run from the repository root:
 ```bash
 pip install -r requirements.txt
 python ashishkumarverma/strategy.py                   # RELIANCE.NS, last 5 sessions
-python ashishkumarverma/strategy.py --sessions 20     # about one month (1-minute breakouts)
-python ashishkumarverma/strategy.py --exec-tf 5 --sessions 40   # about two months (5-minute breakouts)
+python ashishkumarverma/strategy.py --sessions 20     # about one month
 python ashishkumarverma/strategy.py --rr 2            # optional fixed 1:2 target (default: none)
 python ashishkumarverma/strategy.py --min-rvol 1.5 --max-gap-pct 2 --max-sl-pct 1 --last-entry 13:30
 ```
@@ -44,10 +43,7 @@ source. Their prices match the candles built from 1-minute data. Yahoo's 09:15 v
 lower than the sum of its 1-minute candles (the 1-minute data likely includes the pre-open
 auction), which is why one source is used for both parts of the ratio.
 
-`--sessions` can go up to about 20 with 1-minute candles. For longer tests, `--exec-tf 5`
-detects the breakout, stop loss and square-off on Yahoo's **5-minute** candles (60 days kept;
-entry at the close of the first 5-minute candle that breaks the level), allowing up to about
-40 sessions while every tested day still has 20 days of RVOL history.
+`--sessions` can go up to about 20 (the 1-minute data limit).
 
 ## Rules as implemented
 

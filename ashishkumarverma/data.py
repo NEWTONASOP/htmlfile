@@ -37,19 +37,6 @@ def fetch_1m(symbol: str, days: int = 7) -> pd.DataFrame:
     return pd.concat(parts)
 
 
-def fetch_5m(symbol: str) -> pd.DataFrame:
-    """Yahoo's 5-minute OHLCV for the last 60 days (breakout detection for longer tests)."""
-    import yfinance as yf
-
-    df = yf.download(symbol, period="60d", interval="5m", progress=False, auto_adjust=False,
-                     multi_level_index=False)
-    if df is None or df.empty:
-        raise SystemExit(f"yfinance returned no 5-minute data for {symbol}.")
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    return df
-
-
 def fetch_15m(symbol: str) -> pd.DataFrame:
     """Yahoo's own 15-minute OHLCV for the last 60 days (used for the 20-day RVOL history)."""
     import yfinance as yf

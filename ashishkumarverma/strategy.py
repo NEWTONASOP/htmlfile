@@ -8,9 +8,8 @@ Filters  : no trade if |gap| > 2% (09:15 open vs previous close), or RVOL(20) < 
            the same 15-minute slot over the previous 20 trading days (FYERS, option B).
 Alert    : the first 15-minute candle (any time) that CLOSES above Opening High (CE) or
            below Opening Low (PE). Its high / low are the breakout levels.
-Entry    : any time after the alert candle closes, the first 1-minute candle (or 5-minute
-           with --exec-tf 5) that breaks above Alert High (CE) / below Alert Low (PE);
-           filled at that candle's close.
+Entry    : any time after the alert candle closes, the first 1-minute candle that breaks
+           above Alert High (CE) / below Alert Low (PE); filled at that minute's close.
            No entry after 13:30. One trade per day, no re-entry.
 Stop loss: Alert Low (CE) / Alert High (PE), capped at 1% from the entry.
 Exit     : CE when a 15-minute candle closes below the 9 EMA, PE when one closes above it,
@@ -20,7 +19,6 @@ Exit     : CE when a 15-minute candle closes below the 9 EMA, PE when one closes
 Usage:
     python ashishkumarverma/strategy.py                   # RELIANCE.NS, last 5 sessions
     python ashishkumarverma/strategy.py --sessions 20     # about one month (1m data limit)
-    python ashishkumarverma/strategy.py --exec-tf 5 --sessions 40   # about two months
     python ashishkumarverma/strategy.py --rr 2            # optional fixed 1:2 target
 """
 from __future__ import annotations
@@ -36,7 +34,7 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))  # this strategy folder only
-from data import fetch_1m, fetch_5m, fetch_15m, load_csv, clean, resample  # noqa: E402
+from data import fetch_1m, fetch_15m, load_csv, clean, resample  # noqa: E402
 from indicators.orb import day_levels  # noqa: E402
 from indicators.rvol import rvol_slot, rvol_rolling, LENGTH as RVOL_LEN, MIN_RVOL  # noqa: E402
 from indicators.ema import ema, LENGTH as EMA_LEN  # noqa: E402
@@ -46,7 +44,7 @@ SQUARE_OFF = time(15, 0)    # close of the 14:59 one-minute candle
 MAX_GAP_PCT = 2.0
 MAX_SL_PCT = 1.0
 M15 = pd.Timedelta(minutes=15)
-M1 = pd.Timedelta(minutes=1)    # execution candle length; set from --exec-tf
+M1 = pd.Timedelta(minutes=1)
 
 
 @dataclass
@@ -144,20 +142,10 @@ def main():
     ap.add_argument("--max-sl-pct", type=float, default=MAX_SL_PCT)
     ap.add_argument("--last-entry", default=LAST_ENTRY, help="no entry from this time (HH:MM)")
     ap.add_argument("--rr", type=float, default=None, help="optional fixed target (default: none)")
-    ap.add_argument("--exec-tf", type=int, choices=[1, 5], default=1,
-                    help="candles used to detect the breakout, SL and square-off: 1 (about 30 "
-                         "days of data, max ~20 sessions) or 5 (60 days, up to ~40 sessions)")
     ap.add_argument("--out", default=str(HERE / "results"))
     a = ap.parse_args()
 
-    global M1
-    M1 = pd.Timedelta(minutes=a.exec_tf)
-    if a.csv:
-        raw = load_csv(a.csv)
-    elif a.exec_tf == 5:
-        raw = fetch_5m(a.symbol)
-    else:
-        raw = fetch_1m(a.symbol, days=int(a.sessions * 1.6) + 8)
+    raw = load_csv(a.csv) if a.csv else fetch_1m(a.symbol, days=int(a.sessions * 1.6) + 8)
     m1 = clean(raw)
     sessions = sorted(set(m1.index.date))
     if not a.include_today and (m1.index[-1] + M1).time() < time(15, 30):
@@ -213,11 +201,10 @@ def main():
         for col in ("entry", "stop", "exit"):
             tl[col] = tl[col].astype(float).round(2)
 
-    header = (f"ASHISHKUMARVERMA ORB (updated) | {a.symbol} | {window[0]} -> {window[-1]} ({len(window)} sessions) "
-              f"| breakout on {a.exec_tf}m candles\n"
+    header = (f"ASHISHKUMARVERMA ORB (updated) | {a.symbol} | {window[0]} -> {window[-1]} ({len(window)} sessions)\n"
               f"Gap <= {a.max_gap_pct}%, RVOL({RVOL_LEN}, {'same slot, 20 days' if a.rvol_mode == 'slot' else 'last 20 candles'}) "
               f">= {a.min_rvol} on opening and alert candles, "
-              f"entry on {a.exec_tf}m break until {a.last_entry}, SL alert candle capped {a.max_sl_pct}%, "
+              f"entry on 1m break until {a.last_entry}, SL alert candle capped {a.max_sl_pct}%, "
               f"exit on 15m close across EMA {EMA_LEN} / SL / square-off {SQUARE_OFF:%H:%M}"
               f"{f', target 1:{a.rr:g}' if a.rr else ', no fixed target'}.\n")
     wins = int((tl.pnl_pts > 0).sum()) if not tl.empty else 0
