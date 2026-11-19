@@ -1,20 +1,19 @@
 # ASHISHKUMARVERMA – ORB (Opening Range Breakout) Strategy
 
-Intraday ORB backtest on the underlying **spot** price. Levels from **15-minute** candles,
-breakout, stop loss and target checked on **1-minute** spot candles (the closest to "live
-price" available from historical data). Default: `RELIANCE.NS`, last 5 sessions, data from
-the unofficial `yfinance` API.
+Intraday ORB backtest on the stock's **spot** price, with RVOL and gap filters and a
+9 EMA exit. Default: `RELIANCE.NS`, last 5 sessions, data from the unofficial `yfinance` API.
+Strategy only (no chart or dashboard).
 
 ## Folder
 
 | File | What it is |
 |---|---|
-| `strategy.py` | Backtest: setup, breakout entry, capped stop loss, R:R target, square-off, report |
-| `indicators/orb.py` | ORB candle (09:15–09:30) and alert candle (09:30–09:45) levels and the day's setup |
-| `data.py` | Data loader for this strategy: 1-minute yfinance spot data, grouped into 15-minute candles |
-| `results/` | Output of the last run: `days.csv` (levels and setup per day), `trades.csv`, `summary.txt` |
-
-No Pine source is needed: the strategy uses only candle highs, lows and closes.
+| `strategy.py` | Backtest: filters, alert candle, breakout entry, capped stop loss, 9 EMA exit, square-off, report |
+| `indicators/orb.py` | Opening candle (09:15–09:30), gap, and the alert candle for each day |
+| `indicators/rvol.py` | RVOL, length 20 (relative volume) |
+| `indicators/ema.py` | 9 EMA of the 15-minute closes |
+| `data.py` | Data loader: 1-minute yfinance OHLCV, grouped into 15-minute candles |
+| `results/` | Output of the last run: `days.csv` (filters and setup per day), `trades.csv`, `summary.txt` |
 
 ## Run
 
@@ -22,49 +21,42 @@ Run from the repository root:
 
 ```bash
 pip install -r requirements.txt
-python ashishkumarverma/strategy.py                       # RELIANCE.NS, last 5 sessions
-python ashishkumarverma/strategy.py --sessions 20         # about one month (1m data limit)
-python ashishkumarverma/strategy.py --rr 2                # target 1:2
-python ashishkumarverma/strategy.py --max-sl-pct 0.75     # SL cap
-python ashishkumarverma/strategy.py --symbol ^NSEI        # NIFTY 50 spot
-python ashishkumarverma/strategy.py --last-entry 14:30    # last time a new entry may trigger
+python ashishkumarverma/strategy.py                   # RELIANCE.NS, last 5 sessions
+python ashishkumarverma/strategy.py --sessions 20     # about one month
+python ashishkumarverma/strategy.py --rr 2            # optional fixed 1:2 target (default: none)
+python ashishkumarverma/strategy.py --min-rvol 1.5 --max-gap-pct 2 --max-sl-pct 1 --last-entry 13:30
 ```
 
-yfinance keeps 1-minute data for about the last 30 days, so `--sessions` can go up to about 20.
+RVOL needs volume, so use a **stock**. Index symbols such as `^NSEI` have no volume on Yahoo.
 
 ## Data: 1-minute candles only, 15-minute built from them
 
-Only **1-minute** spot candles are downloaded from yfinance. The 15-minute candles are
-**built in the code** from those same 1-minute candles, so both timeframes always come from
-the same prices.
+Only **1-minute** OHLCV candles are downloaded. The 15-minute candles are **built in the
+code** from them (Open = first open, High = highest high, Low = lowest low, Close = last
+close, Volume = sum), on the 09:15, 09:30, … grid.
 
-| Candles | Where they come from | Used for |
-|---|---|---|
-| 1-minute | Downloaded from yfinance | After 09:45: finding the breakout minute, the entry price (that minute's close), and when SL or target is hit |
-| 15-minute | Built from 1-minute: 15 candles → 1 (Open = first open, High = highest high, Low = lowest low, Close = last close), on the 09:15, 09:30, … grid | 09:15–09:29 → ORB candle (ORB High / Low); 09:30–09:44 → alert candle (setup, Alert High / Low) |
+| Candles | Used for |
+|---|---|
+| 1-minute (downloaded) | Finding the breakout minute, the entry price (that minute's close), the stop loss and the 15:00 square-off |
+| 15-minute (built) | Opening candle, alert candle, RVOL, 9 EMA and the 9 EMA exit |
 
-The built 15-minute candles should match TradingView's 15-minute chart, apart from small
-differences in Yahoo's data. The 1-minute candles stand in for the live spot price, which
-historical data does not provide tick by tick.
+yfinance keeps 1-minute data for about the last 30 days, so `--sessions` can go up to about
+20. The oldest day in the data has no earlier candles for RVOL and is skipped.
 
 ## Rules as implemented
 
 | # | Item | Implementation |
 |---|---|---|
-| 1 | Timeframe | 15-minute candles from 09:15 for the ORB and alert candles |
-| 2–3 | ORB candle | 09:15–09:30: **ORB High** = its high, **ORB Low** = its low |
-| 4–5 | Alert candle | 09:30–09:45. Close **above ORB High** = CE setup, **below ORB Low** = PE setup, **between** = no trade that day |
-| 6 | Alert levels | **Alert High** and **Alert Low** = the alert candle's high and low |
-| 7 | CE entry | After 09:45, the first 1-minute candle that trades **strictly above Alert High**. Fill at that **1-minute candle's close** (`--entry-fill level` fills at Alert High instead) |
-| 8 | PE entry | After 09:45, the first 1-minute candle that trades **strictly below Alert Low**. Fill at that candle's close (`--entry-fill level`: at Alert Low) |
-| 9 | No candle close | Breakouts are detected on 1-minute candles, so entries don't wait for a 15-minute close |
-| 10 | Stop loss | CE: Alert Low. PE: Alert High. If that is more than **1%** (`--max-sl-pct`) from the actual entry, the SL is moved to exactly 1%. SL and target are checked from the minute after the entry |
-| 11 | Target | `--rr` × risk from entry (default **1:1**) |
-| 12 | Prices | Entry, SL and target all on the underlying spot price |
-| 13 | One trade | Only the setup's direction is traded, at most one trade per day, no re-entry after an exit |
-| 14 | Square-off | Anything open is closed at **15:15** (close of the 15:14 one-minute candle) |
-| – | Last entry (assumed) | The spec gives no end time for entries; default: no new entry from **15:00** (`--last-entry`) |
-| – | Same minute | If one 1-minute candle touches both SL and target, the SL counts first (conservative) |
-| – | Alert close = ORB High/Low | No trade (the close must be strictly above / below) |
-| – | Opposite break | A CE setup that breaks the Alert Low (or PE setup breaking the Alert High) is not traded |
-| – | Costs | `--cost-pct` round trip, % of entry value (default 0.05%) |
+| 1 | Timeframe | 15-minute candles for levels, filters and the EMA exit |
+| 2 | Opening candle | 09:15–09:30: **Opening High** and **Opening Low** |
+| 3 | RVOL filter | RVOL(20) **≥ 1.5 on both the opening candle and the alert candle**, otherwise no trade. RVOL = candle volume ÷ average volume of the last 20 fifteen-minute candles (including this one), continuing across days. FYERS does not publish its formula; this is the standard definition |
+| 4 | Gap filter | 09:15 open vs the previous day's close: **more than 2%** up or down = no trade (exactly 2% still trades) |
+| 5 | F&O ban | Not applied (dashboard item) |
+| 6 | Alert candle | The **first** 15-minute candle after 09:30, at any time of day, that **closes above Opening High** (CE) or **below Opening Low** (PE). The first such close decides the direction. Its high / low are the breakout levels |
+| 7 | Entry | Any time after the alert candle closes (not necessarily the next candle): the first 1-minute candle that trades **above Alert High** (CE) or **below Alert Low** (PE). Filled at that minute's **close**. **No entry from 13:30** |
+| 8 | Stop loss | CE: Alert Low. PE: Alert High. If more than **1%** from the entry, moved to exactly 1% |
+| 9 | Target | **None** by default; `--rr` adds an optional fixed target |
+| 10 | Exit | CE: a 15-minute candle **closes below the 9 EMA**; PE: one **closes above** it. Exit at the **next 15-minute candle open**. Only candles that close after the entry count |
+| 11 | Position | One trade per stock per day, no re-entry. P&L is in points per share (× your lot size for one lot) |
+| 12 | Square-off | **15:00** (close of the 14:59 one-minute candle) |
+| – | Same minute | If a minute touches the stop loss, the stop counts (checked before any target) |

@@ -38,7 +38,7 @@ def fetch_1m(symbol: str, days: int = 7) -> pd.DataFrame:
 
 
 def load_csv(path: str) -> pd.DataFrame:
-    """CSV with a Datetime (or Date/Time/Timestamp) column plus Open, High, Low, Close."""
+    """CSV with a Datetime (or Date/Time/Timestamp) column plus Open, High, Low, Close, Volume."""
     df = pd.read_csv(path)
     tcol = next(c for c in df.columns if c.lower() in ("datetime", "date", "time", "timestamp"))
     df[tcol] = pd.to_datetime(df[tcol])
@@ -48,8 +48,11 @@ def load_csv(path: str) -> pd.DataFrame:
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
-    """Keep OHLC, convert to IST, drop duplicates and candles outside 09:15-15:30."""
-    df = df[["Open", "High", "Low", "Close"]].dropna().copy()
+    """Keep OHLC + Volume, convert to IST, drop duplicates and candles outside 09:15-15:30."""
+    cols = ["Open", "High", "Low", "Close"] + (["Volume"] if "Volume" in df.columns else [])
+    df = df[cols].dropna(subset=["Open", "High", "Low", "Close"]).copy()
+    if "Volume" not in df.columns:
+        df["Volume"] = float("nan")
     idx = df.index
     if idx.tz is None:
         idx = idx.tz_localize(IST)
@@ -65,6 +68,7 @@ def resample(df: pd.DataFrame, minutes: int) -> pd.DataFrame:
     Bins start at midnight IST, so 15-minute bins fall on 09:15, 09:30, ... (555 % 15 == 0).
     """
     out = df.resample(f"{minutes}min", origin="start_day", label="left", closed="left").agg(
-        {"Open": "first", "High": "max", "Low": "min", "Close": "last"}).dropna()
+        {"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}
+    ).dropna(subset=["Open", "High", "Low", "Close"])
     t = out.index.time
     return out[(t >= time(9, 15)) & (t < time(15, 30))]
