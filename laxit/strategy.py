@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LAXIT - intraday strategy backtest (5-minute candles by default, NSE).
+LAXIT - intraday strategy backtest (2-minute candles by default, NSE).
 
 Indicators : SMA 20 of High, SMA 20 of Low, MACD (TradingView built-in: EMA 12 - EMA 26
              of close, signal = EMA 9 of MACD, crossover = histogram crossing 0).
@@ -16,8 +16,8 @@ Management : at 1:1 book 50%, move SL to cost, then trail the rest with the SMA 
              (CALL: SMA20 Low, PUT: SMA20 High), never loosening. Forced exit 15:15.
 
 Usage:
-    python laxit/strategy.py                        # RELIANCE.NS 5m, last 5 complete sessions
-    python laxit/strategy.py --interval 2m          # same rules on 2-minute candles
+    python laxit/strategy.py                        # RELIANCE.NS 2m, last 5 complete sessions
+    python laxit/strategy.py --interval 5m          # same rules on 5-minute candles
     python laxit/strategy.py --sessions 40 --cost-pct 0.05
     python laxit/strategy.py --one-at-a-time        # no CALL/PUT overlap
     python laxit/strategy.py --day 2026-11-13       # print only that day's trades
@@ -44,7 +44,7 @@ BODY_BEYOND = 0.5             # more than 50% of the body beyond the SMA
 ENTRY_START = time(9, 45)     # entry candle may start at 09:45 ...
 ENTRY_END = time(14, 20)      # ... and must end by 14:20
 SQUARE_OFF = time(15, 15)     # forced exit at the close of the candle ending 15:15
-BAR_MIN = 5                   # set from --interval
+BAR_MIN = 2                   # set from --interval
 
 
 # ---------------------------------------------------------------- indicators
@@ -191,7 +191,7 @@ def report(trades: list[Trade], qty: int, cost_pct: float) -> tuple[pd.DataFrame
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--symbol", default="RELIANCE.NS")
-    ap.add_argument("--interval", default="5m", choices=["5m", "2m"], help="candle timeframe")
+    ap.add_argument("--interval", default="2m", choices=["2m", "5m"], help="candle timeframe")
     ap.add_argument("--csv", help="load OHLC from CSV instead of yfinance (same timeframe as --interval)")
     ap.add_argument("--sessions", type=int, default=5)
     ap.add_argument("--include-today", action="store_true")

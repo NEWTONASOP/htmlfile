@@ -9,7 +9,7 @@ TradingView Pine source where one was provided.
 | Strategy | Folder | Timeframe | Indicators |
 |---|---|---|---|
 | Neeraj – Kyle Algo + Liquidity Swings | [`neeraj/`](neeraj/README.md) | 5m | Kyle Algo EMA ribbon, Liquidity Swings [LuxAlgo] |
-| LAXIT – SMA 20 High/Low + MACD | [`laxit/`](laxit/README.md) | 5m (2m option) | SMA 20 High/Low, MACD |
+| LAXIT – SMA 20 High/Low + MACD | [`laxit/`](laxit/README.md) | 2m (5m option) | SMA 20 High/Low, MACD |
 | Rakesh Rattan – EMA Crossover | [`rakesh/`](rakesh/README.md) | 5m | EMA 15/30/35/40/45/50/60 |
 | TOUFIK – EMA 4 / MA 10 | [`toufik/`](toufik/README.md) | 3m | EMA 4, MA 10 (SMA) |
 | ASHISHKUMARVERMA – ORB | [`ashishkumarverma/`](ashishkumarverma/README.md) | 15m | Opening/alert candle, RVOL 20, gap filter, 9 EMA exit |

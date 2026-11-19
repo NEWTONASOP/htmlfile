@@ -1,6 +1,6 @@
 # LAXIT – Intraday Strategy
 
-Intraday backtest on 5-minute candles (2-minute with `--interval 2m`) using SMA 20 High,
+Intraday backtest on 2-minute candles (5-minute with `--interval 5m`) using SMA 20 High,
 SMA 20 Low and MACD. Default: `RELIANCE.NS`, last 1 week (5 sessions), data from `yfinance`.
 
 ## Folder
@@ -19,8 +19,8 @@ SMA 20 Low and MACD. Default: `RELIANCE.NS`, last 1 week (5 sessions), data from
 Run from the repository root:
 
 ```bash
-python laxit/strategy.py                  # RELIANCE.NS 5m, last 5 complete sessions
-python laxit/strategy.py --interval 2m    # same rules on 2-minute candles
+python laxit/strategy.py                  # RELIANCE.NS 2m, last 5 complete sessions
+python laxit/strategy.py --interval 5m    # same rules on 5-minute candles
 python laxit/strategy.py --sessions 40 --cost-pct 0.05
 python laxit/strategy.py --day 2026-11-13 # print one day's trades
 python laxit/strategy.py --one-at-a-time  # no CALL/PUT overlap
@@ -34,12 +34,12 @@ histogram crossing 0.
 
 | Item | Implementation |
 |---|---|
-| Timeframe | 5-minute candles (`--interval 2m` for 2-minute) |
+| Timeframe | 2-minute candles (`--interval 5m` for 5-minute) |
 | Indicators | SMA 20 of High, SMA 20 of Low, MACD 12/26/9 on close |
 | CALL setup candle | Green, **more than 50% of its body above SMA 20 High**, and a **bullish MACD crossover** (MACD crossing above its signal line) on this candle or the 2 candles before it, with MACD still above signal |
 | PUT setup candle | Red, more than 50% of its body below SMA 20 Low, and a bearish crossover on this candle or the 2 before it, with MACD still below signal |
 | Entry | **Next candle only**: CALL fills when price breaks above the setup high (at the open if it gaps above it). PUT fills on a break below the setup low |
-| Trading time | Entry candle between 09:45 and 14:20 (last 5m entry candle 14:15–14:20). Trades already open are held until 15:15 |
+| Trading time | Entry candle between 09:45 and 14:20 (last 2m entry candle 14:18–14:20). Trades already open are held until 15:15 |
 | Stop loss | CALL: SMA 20 Low on the setup candle. PUT: SMA 20 High. Fixed until T1 |
 | T1 | 1:1 of the initial risk: book **50%** and move SL to **cost** |
 | Trail | After T1, at each candle close the SL follows SMA 20 Low (CALL) or SMA 20 High (PUT), only ever tightening and never past cost |
