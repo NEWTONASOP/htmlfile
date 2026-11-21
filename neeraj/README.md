@@ -43,7 +43,7 @@ warm-up, so the EMAs and pivots are settled before the backtest week starts.
 | Kyle ribbon | 15 EMAs of **high**, lengths 9, 12, …, 51 (as in the indicator source) |
 | CALL entry | A candle **closes above every ribbon EMA** and the previous candle did not (fresh cross) → buy at the **next candle's open** |
 | PUT entry | A candle **closes below every ribbon EMA** and the previous candle did not → short at the next candle's open |
-| CALL vs PUT | `--mode independent` (default): CALL and PUT are **separate trades** and can be open at the same time (like holding a call and a put option). A PUT signal does not close an open CALL; each closes only on its own zone, its 1% SL or 15:15. A new signal is ignored while a trade of the same side is open |
+| Positions | `--mode multi` (default): **every fresh signal opens its own trade**, so several CALLs and PUTs can be open at the same time. Each trade closes on its own: its zone, its 1% SL or 15:15 |
 | Other modes | `--mode reverse`: one position, and an opposite signal reverses it. `--mode hold` (or `--no-reverse`): one position, and opposite signals are ignored until it closes |
 | CALL exit | Next **RED (swing-high) Liquidity Swings zone** |
 | PUT exit | Next **GREEN (swing-low) zone** |

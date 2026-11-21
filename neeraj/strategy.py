@@ -7,8 +7,8 @@ Indicators live in neeraj/indicators/ (Python ports + original Pine sources).
 Entries : Kyle Algo EMA ribbon (15 EMAs of HIGH, lengths 9..51 step 3).
           Fresh close above the whole ribbon -> CALL (long) next candle open.
           Fresh close below the whole ribbon -> PUT (short) next candle open.
-          Default --mode independent: CALL and PUT are separate trades that can
-          overlap (--mode reverse / hold for a single position).
+          Default --mode multi: every fresh signal opens its own trade, so several
+          CALLs and PUTs can be open together (--mode reverse / hold: one position).
 Exits   : Liquidity Swings (LuxAlgo) zones that get drawn (Count filter 0), lookback 14.
           CALL exits on the next RED (swing-high) zone, PUT on the next GREEN zone.
           Default --exit-at swing: at the zone's swing candle, like manual chart
@@ -176,6 +176,54 @@ def run(df: pd.DataFrame, start_date, reverse: bool = True, exit_at: str = "swin
     return trades
 
 
+def run_multi(df: pd.DataFrame, start_date, exit_at: str = "swing") -> list[Trade]:
+    """Every fresh signal opens its own trade; any number of CALLs and PUTs can be open
+    together. Each trade is managed on its own with the same steps and order as run():
+    fill at the next open, stop loss inside the candle, square-off 15:15, zone exit."""
+    idx, dates, n = df.index, df.index.date, len(df)
+    O, H, L, C = (df[k].to_numpy() for k in ("Open", "High", "Low", "Close"))
+    CS, PS, WARM = (df[k].to_numpy() for k in ("call_sig", "put_sig", "warm"))
+    RSW, GSW = df["red_swing"].to_numpy(), df["green_swing"].to_numpy()
+    RZ, GZ = df["red_zone"].to_numpy(), df["green_zone"].to_numpy()
+    RPT, GPT = df["red_pivot_time"].to_numpy(), df["green_pivot_time"].to_numpy()
+    end_t = [(t + pd.Timedelta(minutes=5)).time() for t in idx]
+    sl = STOP_LOSS_PCT / 100
+    trades: list[Trade] = []
+
+    for i in range(n - 1):
+        if not (dates[i] >= start_date and WARM[i]) or dates[i + 1] != dates[i]:
+            continue
+        if end_t[i] > LAST_ENTRY_SIGNAL_END or not (CS[i] or PS[i]):
+            continue
+        side = "CALL" if CS[i] else "PUT"
+        k = i + 1
+        t = Trade(side, idx[i], idx[k], float(O[k]),
+                  float(O[k] * (1 - sl) if side == "CALL" else O[k] * (1 + sl)))
+        call = side == "CALL"
+        pending = None
+        for j in range(k, n):
+            last = j == n - 1 or dates[j + 1] != dates[j]
+            if pending is not None:                                   # confirm-mode exit
+                t.exit_time, t.exit, t.reason, t.zone_pivot_time = idx[j], float(O[j]), pending[0], pending[1]
+                break
+            if (L[j] <= t.stop) if call else (H[j] >= t.stop):
+                t.exit_time, t.exit, t.reason = idx[j], float(min(O[j], t.stop) if call else max(O[j], t.stop)), "StopLoss"
+                break
+            if end_t[j] >= SQUARE_OFF or last:
+                t.exit_time, t.exit, t.reason = idx[j], float(C[j]), "SquareOff 15:15"
+                break
+            if end_t[j] > LAST_EXIT_SIGNAL_END:
+                continue
+            if exit_at == "swing" and (RSW[j] if call else GSW[j]):
+                t.exit_time, t.exit = idx[j], float(C[j])
+                t.reason, t.zone_pivot_time = f"{'RED' if call else 'GREEN'} zone (swing candle)", idx[j]
+                break
+            if exit_at == "confirm" and (RZ[j] if call else GZ[j]):
+                pending = (f"{'RED' if call else 'GREEN'} liquidity zone", RPT[j] if call else GPT[j])
+        trades.append(t)
+    return trades
+
+
 # ---------------------------------------------------------------- reporting
 def report(trades: list[Trade], qty: int, cost_pct: float) -> tuple[pd.DataFrame, str]:
     rows = []
@@ -241,11 +289,11 @@ def main():
     ap.add_argument("--exit-at", choices=["swing", "confirm"], default="swing",
                     help="swing (default): exit at the zone's swing candle, like reading a "
                          "finished chart (hindsight). confirm: exit when the zone appears live")
-    ap.add_argument("--mode", choices=["independent", "reverse", "hold"], default="independent",
-                    help="independent (default): CALL and PUT are separate trades that can be open "
-                         "together, each closed only by its own zone, SL or 15:15. reverse: one "
-                         "position, an opposite signal reverses it. hold: one position, opposite "
-                         "signals ignored until it closes")
+    ap.add_argument("--mode", choices=["multi", "reverse", "hold"], default="multi",
+                    help="multi (default): every signal opens its own trade; several CALLs and "
+                         "PUTs can be open together, each closed by its own zone, SL or 15:15. "
+                         "reverse: one position, an opposite signal reverses it. hold: one "
+                         "position, opposite signals ignored until it closes")
     ap.add_argument("--no-reverse", action="store_true", help="same as --mode hold")
     ap.add_argument("--zones", metavar="YYYY-MM-DD",
                     help="only list the Liquidity Swings zones drawn on that date, then exit")
@@ -265,15 +313,14 @@ def main():
         return
     if a.no_reverse:
         a.mode = "hold"
-    if a.mode == "independent":
-        trades = (run(df, window[0], reverse=False, exit_at=a.exit_at, sides=("CALL",))
-                  + run(df, window[0], reverse=False, exit_at=a.exit_at, sides=("PUT",)))
+    if a.mode == "multi":
+        trades = run_multi(df, window[0], exit_at=a.exit_at)
         trades.sort(key=lambda t: (t.entry_time, t.side))
     else:
         trades = run(df, window[0], reverse=a.mode == "reverse", exit_at=a.exit_at)
     tl, summary = report(trades, a.qty, a.cost_pct)
 
-    mode = {"independent": "CALL & PUT independent", "reverse": "reverse on opposite signal",
+    mode = {"multi": "every signal its own trade", "reverse": "reverse on opposite signal",
             "hold": "one trade at a time, hold through opposite signals"}[a.mode]
     mode += (", exit at swing candle [hindsight]" if a.exit_at == "swing"
              else ", exit when zone appears [live]")
