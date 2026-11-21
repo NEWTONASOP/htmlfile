@@ -18,6 +18,7 @@ Data    : COMEX gold futures GC=F (Yahoo has no spot XAUUSD), SMT vs silver SI=F
 
 Usage:
     python praful/strategy.py
+    python praful/strategy.py --days 7       # last week only
 """
 from __future__ import annotations
 
@@ -67,6 +68,8 @@ def simulate(bars: pd.DataFrame, sig: dict) -> dict:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--days", type=int, default=None,
+                    help="only trade signals from the last N calendar days (earlier data still warms up the indicator)")
     ap.add_argument("--out", default=str(HERE / "results"))
     a = ap.parse_args()
 
@@ -77,6 +80,8 @@ def main():
         silver = None
     bars, signals = ict_run(gold, silver, MINTICK)
 
+    start = gold.index[-1].normalize() - pd.Timedelta(days=a.days - 1) if a.days else gold.index[0]
+    signals = [s for s in signals if s["time"] >= start]
     rows = []
     for s in signals:
         if s["skipped"]:
@@ -99,7 +104,7 @@ def main():
                 f"net ${t.pnl_usd.sum():+.2f}, avg ${t.pnl_usd.mean():+.2f}"]
 
     taken = tl[tl.traded] if not tl.empty else tl
-    first, last = gold.index[0].date(), gold.index[-1].date()
+    first, last = start.date(), gold.index[-1].date()
     lines = [f"Data            : {SYMBOL} 5m, {first} -> {last} (New York time), SMT vs {SMT_SYMBOL}",
              f"Signals         : {len(signals)} ({skipped} skipped: stop wider than 3 x ATR14)"]
     lines += stats(taken, "TRADED A+/B")
