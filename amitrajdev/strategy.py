@@ -50,12 +50,30 @@ COND_NAMES = ["SMA120", "LuxPivot", "RevZones", "SmoothHA"]
 
 
 # ---------------------------------------------------------------- indicators
-def add_indicators(df: pd.DataFrame):
+def _label_state(n: int, positions, values) -> np.ndarray:
+    """State that changes at each label's chart position (later labels win), carried forward."""
+    arr = np.zeros(n)
+    arr[:] = np.nan
+    for pos, val in zip(positions, values):
+        arr[int(pos)] = val
+    out = pd.Series(arr).ffill().fillna(0).astype(int).to_numpy()
+    return out
+
+
+def add_indicators(df: pd.DataFrame, signal_time: str = "confirmed"):
+    """signal_time="confirmed": LuxAlgo pivot and Reversal Zones signals count from the candle
+    where they are confirmed (what a live chart shows). "label": they count from the candle
+    where the label is drawn on a finished chart (uses later data -> hindsight)."""
     df = df.copy()
     df["sma120"] = sma_ind.sma(df)
     lux_state, lux_events = lux_pivots(df)
     df["lux_state"] = lux_state
     df = pd.concat([df, reversal_entry_zones(df), smoothed_heiken_ashi(df)], axis=1)
+    if signal_time == "label":
+        ev = lux_events.sort_values("pivot_idx", kind="stable")
+        df["lux_state"] = _label_state(len(df), ev.pivot_idx, np.where(ev.kind == "low", 1, -1))
+        rz = df[df.rez_signal != 0]
+        df["rez_last"] = _label_state(len(df), rz.rez_pivot_idx, rz.rez_signal)
 
     # +1 bullish, -1 bearish, 0 neutral/unknown, per condition
     c1 = np.sign(df["Close"] - df["sma120"]).fillna(0).astype(int)
@@ -188,6 +206,9 @@ def main():
     ap.add_argument("--csv", help="load 5m OHLC from CSV instead of yfinance")
     ap.add_argument("--sessions", type=int, default=5, help="trading sessions to backtest (5 = one week)")
     ap.add_argument("--include-today", action="store_true")
+    ap.add_argument("--signal-time", choices=["confirmed", "label"], default="confirmed",
+                    help="confirmed: LuxAlgo/RevZones signals count when confirmed (live). "
+                         "label: they count where the label sits on a finished chart (hindsight)")
     ap.add_argument("--exit-count", choices=["now", "since-entry"], default="since-entry",
                     help="now: 2+ conditions against the trade on the same close; "
                          "since-entry: 2+ conditions that turned against it at any time since entry")
@@ -203,12 +224,12 @@ def main():
         sessions = sessions[:-1]
         df = df[df.index.date <= sessions[-1]]
     window = sessions[-a.sessions:]
-    df, lux_events = add_indicators(df)
+    df, lux_events = add_indicators(df, a.signal_time)
     trades = run(df, window[0], a.exit_count)
     tl, lines = report(trades, a.qty, a.cost_pct)
     status = status_lines(df)
 
-    title = (f"AMIT RAJDEV 5m reversal | {a.symbol} | {window[0]} -> {window[-1]} "
+    title = (f"AMIT RAJDEV 5m reversal [{a.signal_time} signals] | {a.symbol} | {window[0]} -> {window[-1]} "
              f"({len(window)} sessions) | exit: 2+ against ({a.exit_count})")
     header = (f"{title}\nEntry next open when all 4 newly align (until the 15:00 open), "
               f"no SL, square-off {SQUARE_OFF:%H:%M}, qty {a.qty}.\n")

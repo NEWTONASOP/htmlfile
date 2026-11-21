@@ -27,6 +27,7 @@ python amitrajdev/strategy.py                      # RELIANCE.NS, last 5 session
 python amitrajdev/strategy.py --sessions 40        # about 2 months
 python amitrajdev/strategy.py --day 2026-11-17     # print one day's trades
 python amitrajdev/strategy.py --exit-count now          # same-close exit variant
+python amitrajdev/strategy.py --signal-time label       # read pivots/reversals at their label position
 ```
 
 ## The 4 conditions (checked on every completed 5-minute candle)
@@ -64,6 +65,7 @@ python amitrajdev/strategy.py --exit-count now          # same-close exit varian
 | Square-off | **15:15** (close of the 15:10 candle) |
 | Overnight | Indicators run continuously across days, like TradingView, but a signal on the last candle of a day is not carried to the next morning |
 | Costs | None by default (`--cost-pct` to add) |
+| Signal time (`--signal-time`) | `confirmed` (default): the LuxAlgo pivot and Reversal Entry Zones conditions change on the candle where the pivot / reversal is **confirmed**, as on a live chart. `label`: they change on the candle where the label is **drawn** on a finished chart (pivot candle / turning point). `label` matches reading a finished chart but uses later data, so it cannot be traded live |
 
 ## Chart (`results/chart.html`)
 
