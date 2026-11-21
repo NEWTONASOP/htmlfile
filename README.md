@@ -14,7 +14,6 @@ TradingView Pine source where one was provided.
 | TOUFIK – EMA 4 / MA 10 | [`toufik/`](toufik/README.md) | 3m | EMA 4, MA 10 (SMA) |
 | ASHISHKUMARVERMA – ORB | [`ashishkumarverma/`](ashishkumarverma/README.md) | 15m | Opening/alert candle, RVOL 20, gap filter, 9 EMA exit |
 | AMIT RAJDEV – 5-min Reversal | [`amitrajdev/`](amitrajdev/README.md) | 5m | SMA 120, LuxAlgo Pivots, Reversal Entry Zones, Smoothed Heiken Ashi |
-| ASHISH SETHI – NIFTY Option Selling | [`ashishsethi/`](ashishsethi/README.md) | 5m | NIFTY spot + India VIX, Black-Scholes premium |
 
 ```
 neeraj/
@@ -49,11 +48,6 @@ amitrajdev/
   data.py
   chart.py
   indicators/  sma.py  luxalgo_pivots.py/.pine  reversal_entry_zones.py/.pine  smoothed_heiken_ashi.py/.pine
-ashishsethi/
-  README.md
-  strategy.py
-  data.py
-  indicators/  black_scholes.py  expiry.py
 ```
 
 ## Run (from the repository root, or `cd <folder>` and `python strategy.py`)
@@ -66,7 +60,6 @@ python rakesh/strategy.py
 python toufik/strategy.py
 python ashishkumarverma/strategy.py
 python amitrajdev/strategy.py
-python ashishsethi/strategy.py
 ```
 
 Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps about
