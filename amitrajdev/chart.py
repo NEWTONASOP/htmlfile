@@ -27,7 +27,7 @@ def make_chart(full: pd.DataFrame, view: pd.DataFrame, lux_events: pd.DataFrame,
     fig.add_trace(go.Scatter(x=x, y=view.sma120, name="SMA 120", line=dict(color="#7e57c2", width=1.8)),
                   row=1, col=1)
 
-    # LuxAlgo pivots whose pivot candle is inside the view; hover shows the confirmation time
+    # LuxAlgo pivots whose pivot candle is inside the view
     if not lux_events.empty:
         ev = lux_events[lux_events.pivot_idx >= first].copy()
         if not ev.empty:
@@ -45,7 +45,7 @@ def make_chart(full: pd.DataFrame, view: pd.DataFrame, lux_events: pd.DataFrame,
                 fig.add_trace(go.Scatter(
                     x=e.x, y=e.price * off, mode="markers", name=name,
                     marker=dict(symbol=sym, size=12, color=color, line=dict(width=2, color=color)),
-                    text=[f"{name} {p:.2f}<br>confirmed {c}" for p, c in zip(e.price, e.conf)],
+                    text=[f"{name} {p:.2f}" for p in e.price],
                     hoverinfo="text+x"), row=1, col=1)
 
     # Reversal Entry Zones confirmations, drawn at the pivot like the indicator
@@ -59,43 +59,7 @@ def make_chart(full: pd.DataFrame, view: pd.DataFrame, lux_events: pd.DataFrame,
             name=name, text=["BULL REV" if s == 1 else "BEAR REV"] * len(r),
             textposition="bottom center" if s == 1 else "top center", textfont=dict(size=9, color=color),
             marker=dict(symbol="square", size=7, color=color),
-            hovertext=[f"{name} {p:.2f}<br>confirmed {c}" for p, c in zip(r.rez_price, lab(r.index))],
-            hoverinfo="text+x"), row=1, col=1)
-
-    # The moment each signal is CONFIRMED (when the strategy can use it), on the candle where
-    # it happens, even if its label sits earlier on the chart or before this view
-    in_view = full.index >= start
-    if not lux_events.empty:
-        reg = lux_events[~lux_events.missed & (lux_events.confirm_idx >= first)]
-        for kind, color, name, sym in (("high", "#ef5350", "Pivot High confirmed", "star-triangle-down"),
-                                       ("low", "#26a69a", "Pivot Low confirmed", "star-triangle-up")):
-            e = reg[reg.kind == kind]
-            if e.empty:
-                continue
-            ci = e.confirm_idx.to_numpy()
-            y = full.High.to_numpy()[ci] * 1.0012 if kind == "high" else full.Low.to_numpy()[ci] * 0.9988
-            fig.add_trace(go.Scatter(
-                x=lab(full.index[ci]), y=y, mode="markers+text", name=name,
-                text=["PIVOT ✓"] * len(e), textposition="top center" if kind == "high" else "bottom center",
-                textfont=dict(size=9, color=color),
-                marker=dict(symbol=sym, size=14, color=color, line=dict(width=1, color="black")),
-                hovertext=[f"{name} here<br>(label drawn at {p}, price {v:.2f})"
-                           for p, v in zip(lab(full.index[e.pivot_idx]), e.price)],
-                hoverinfo="text+x"), row=1, col=1)
-    rc = full[(full.rez_signal != 0) & in_view]
-    for s, color, name, sym in ((1, "#00b978", "Bullish Reversal confirmed", "star-triangle-up"),
-                                (-1, "#eb4040", "Bearish Reversal confirmed", "star-triangle-down")):
-        r = rc[rc.rez_signal == s]
-        if r.empty:
-            continue
-        y = r.Low * 0.9992 if s == 1 else r.High * 1.0008
-        fig.add_trace(go.Scatter(
-            x=lab(r.index), y=y, mode="markers+text", name=name,
-            text=["REV ✓"] * len(r), textposition="bottom center" if s == 1 else "top center",
-            textfont=dict(size=9, color=color),
-            marker=dict(symbol=sym, size=11, color=color, line=dict(width=1, color="white")),
-            hovertext=[f"{name} here<br>(label drawn at {p})"
-                       for p in lab(full.index[r.rez_pivot_idx.astype(int)])],
+            hovertext=[f"{name} {p:.2f}" for p in r.rez_price],
             hoverinfo="text+x"), row=1, col=1)
 
     # entries and exits

@@ -26,8 +26,6 @@ pip install -r requirements.txt
 python amitrajdev/strategy.py                      # RELIANCE.NS, last 5 sessions
 python amitrajdev/strategy.py --sessions 40        # about 2 months
 python amitrajdev/strategy.py --day 2026-11-17     # print one day's trades
-python amitrajdev/strategy.py --exit-count now          # same-close exit variant
-python amitrajdev/strategy.py --signal-time confirmed   # pivots/reversals count when confirmed (live)
 ```
 
 ## The 4 conditions (checked on every completed 5-minute candle)
@@ -42,14 +40,10 @@ python amitrajdev/strategy.py --signal-time confirmed   # pivots/reversals count
 **Notes from the indicator sources**
 
 * **LuxAlgo:** each label (▲/▼ and missed 👻) counts from the candle where it sits on the
-  chart (default `--signal-time label`). On a live chart a regular pivot only appears 50
-  candles after its pivot candle, and missed pivots appear at the same moment, drawn back
-  in time. The ghost that moves on the live last candle is provisional and not used.
+  chart. The ghost that moves on the live last candle is provisional and not used.
 * **Reversal Entry Zones:** tracks running highs/lows of EMA 5 of high/low. A reversal
   confirms when price comes back by `max(0.015% of close, 0.05, 2.8 × ATR 5)`, and the
-  label is drawn back at the turning point. With the default `--signal-time label` the
-  condition changes at that turning point; with `confirmed` it changes when the reversal is
-  confirmed (the "Last Signal" row on a live chart).
+  label is drawn at the turning point. The condition changes where that label sits.
 * **Smoothed Heiken Ashi:** Red when the smoothed open is above the smoothed close,
   otherwise Green (same as the Pine `col`).
 
@@ -59,21 +53,19 @@ python amitrajdev/strategy.py --signal-time confirmed   # pivots/reversals count
 |---|---|
 | Entry | All 4 conditions BUY (or all 4 SELL) on a candle close **and not all 4 on the previous candle** (newly aligned), with no open position → enter at the **next candle open** |
 | Re-entry | After an exit, a new entry needs the 4 conditions to newly align again |
-| Exit (default `--exit-count since-entry`, confirmed) | BUY: exit at the next open once **2 or more conditions have turned SELL at any candle close since entry**, even if one turned back to BUY (SELL: 2+ turned BUY). The exit reason lists which ones |
-| Exit (`--exit-count now`) | Alternative: 2 or more conditions against the trade on the same candle close |
+| Exit | BUY: exit at the next open once **2 or more conditions have turned SELL at any candle close since entry**; they do not need to change together, and a condition that turned back still counts (SELL: 2+ turned BUY). The exit reason lists which ones |
 | Reverse | No automatic reverse entry after an exit |
 | Position | One open position at a time, quantity 1, **no stop loss** |
 | Last entry | Entry candle may open at **15:00** at the latest (signal on the 14:55 candle) |
 | Square-off | **15:15** (close of the 15:10 candle) |
 | Overnight | Indicators run continuously across days, like TradingView, but a signal on the last candle of a day is not carried to the next morning |
 | Costs | None by default (`--cost-pct` to add) |
-| Signal time (`--signal-time`) | `label` (**default**, confirmed by the client): the LuxAlgo pivot and Reversal Entry Zones conditions change on the candle where the label is **drawn** on the chart (pivot candle / turning point), including missed pivots. ⚠️ A label is only drawn later (LuxAlgo: 50 candles after the pivot), so this uses later data and backtest results are better than live trading could achieve. `confirmed`: they change when the pivot / reversal is confirmed, as on a live chart |
+| Signal timing | The LuxAlgo pivot and Reversal Entry Zones conditions change on the candle where their label sits on the chart (pivot candle / turning point), including missed pivots |
 
 ## Chart (`results/chart.html`)
 
-* **Top:** 5-minute candles, SMA 120, LuxAlgo pivots (▲/▼ regular, ◇ missed; hover shows
-  when each was confirmed), Reversal Entry Zones signals (BULL REV / BEAR REV at the pivot,
-  hover shows the confirmation time), BUY/SELL entries and exits (✖, hover shows the reason).
+* **Top:** 5-minute candles, SMA 120, LuxAlgo pivots (▲/▼ regular, ◇ missed), Reversal
+  Entry Zones signals (BULL REV / BEAR REV), BUY/SELL entries and exits (✖, hover shows the reason).
 * **Middle:** Smoothed Heiken Ashi candles.
 * **Bottom:** status strip of all 4 conditions on every candle (green = BUY, red = SELL).
 * **Header:** trade stats and the current BUY/SELL status of each condition.
