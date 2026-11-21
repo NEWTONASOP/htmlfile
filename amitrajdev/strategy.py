@@ -11,9 +11,9 @@ Conditions (evaluated on each completed 5-minute candle):
   4. Smoothed Heiken Ashi v1   BUY: candle Green              SELL: candle Red
 Entry : all 4 newly aligned on a candle close (not aligned on the previous candle) and no
         open position -> enter at the next candle open. Entries up to the 15:00 candle open.
-Exit  : exit at the next open once 2+ conditions have turned against the trade (bearish for
-        a BUY, bullish for a SELL) at any candle close since entry, even if one turned back.
-        They do not need to change together. No reverse entry.
+Exit  : exit at the next open when, on a candle close, 2+ conditions are against the trade
+        at that moment (bearish for a BUY, bullish for a SELL). They do not need to change
+        together, but a condition that has turned back does not count. No reverse entry.
 Risk  : quantity 1, no stop loss, square-off 15:15. Signals are not carried overnight.
 
 Usage:
@@ -109,7 +109,6 @@ def run(df: pd.DataFrame, start_date) -> list[Trade]:
     NB, NS, WARM = (df[k].to_numpy() for k in ("new_bull", "new_bear", "warm"))
     trades: list[Trade] = []
     pos: Trade | None = None
-    against: set = set()
     pending = None
 
     for i in range(1, len(df)):
@@ -126,7 +125,6 @@ def run(df: pd.DataFrame, start_date) -> list[Trade]:
                 pos = None
             elif pending[0] in ("BUY", "SELL") and pos is None and ts.time() <= LAST_ENTRY_OPEN:
                 pos = Trade(pending[0], pending[1], ts, float(O[i]))
-                against = set()
         pending = None
 
         # 2) square-off
@@ -141,8 +139,7 @@ def run(df: pd.DataFrame, start_date) -> list[Trade]:
         if pos is not None:
             bad = -1 if pos.side == "BUY" else 1
             now = {COND_NAMES[k] for k in range(4) if conds[i, k] == bad}
-            against |= now
-            hits = against
+            hits = now                      # current state only
             if len(hits) >= 2:
                 word = "bearish" if pos.side == "BUY" else "bullish"
                 pending = ("exit", ts, f"{len(hits)} {word}: " + "+".join(sorted(hits)))

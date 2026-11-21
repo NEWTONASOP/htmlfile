@@ -53,7 +53,7 @@ python amitrajdev/strategy.py --day 2026-11-17     # print one day's trades
 |---|---|
 | Entry | All 4 conditions BUY (or all 4 SELL) on a candle close **and not all 4 on the previous candle** (newly aligned), with no open position → enter at the **next candle open** |
 | Re-entry | After an exit, a new entry needs the 4 conditions to newly align again |
-| Exit | BUY: exit at the next open once **2 or more conditions have turned SELL at any candle close since entry**; they do not need to change together, and a condition that turned back still counts (SELL: 2+ turned BUY). The exit reason lists which ones |
+| Exit | BUY: exit at the next open when, on a candle close, **2 or more conditions are SELL at that moment** (current state). They do not need to change together, but a condition that has turned back to BUY no longer counts (SELL: 2+ are BUY). The exit reason lists which ones |
 | Reverse | No automatic reverse entry after an exit |
 | Position | One open position at a time, quantity 1, **no stop loss** |
 | Last entry | Entry candle may open at **15:00** at the latest (signal on the 14:55 candle) |
