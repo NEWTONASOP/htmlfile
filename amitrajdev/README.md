@@ -27,7 +27,7 @@ python amitrajdev/strategy.py                      # RELIANCE.NS, last 5 session
 python amitrajdev/strategy.py --sessions 40        # about 2 months
 python amitrajdev/strategy.py --day 2026-11-17     # print one day's trades
 python amitrajdev/strategy.py --exit-count now          # same-close exit variant
-python amitrajdev/strategy.py --signal-time label       # read pivots/reversals at their label position
+python amitrajdev/strategy.py --signal-time confirmed   # pivots/reversals count when confirmed (live)
 ```
 
 ## The 4 conditions (checked on every completed 5-minute candle)
@@ -35,19 +35,21 @@ python amitrajdev/strategy.py --signal-time label       # read pivots/reversals 
 | # | Indicator | BUY when | SELL when |
 |---|---|---|---|
 | 1 | SMA 120 (close) | Close **above** SMA 120 | Close **below** SMA 120 |
-| 2 | LuxAlgo pivots (50) | Latest confirmed pivot is a **Low** | Latest confirmed pivot is a **High** |
-| 3 | Reversal Entry Zones | Last Signal = **Bullish Reversal** | Last Signal = **Bearish Reversal** |
+| 2 | LuxAlgo pivots (50) | Latest pivot label on the chart (▲ or missed 👻 low) is a **Low** | Latest pivot label (▼ or missed 👻 high) is a **High** |
+| 3 | Reversal Entry Zones | Latest label on the chart is **Bullish Reversal** | Latest label is **Bearish Reversal** |
 | 4 | Smoothed Heiken Ashi | Candle **Green** | Candle **Red** |
 
 **Notes from the indicator sources**
 
-* **LuxAlgo:** regular pivots confirm 50 candles after the pivot candle. Missed pivots (👻)
-  are only drawn on the candle where a regular pivot confirms, and always sit *before*
-  that regular pivot. So the latest confirmed pivot (normal or missed) is always the latest
-  regular ▲/▼. The ghost that moves on the live last candle is provisional and not used.
+* **LuxAlgo:** each label (▲/▼ and missed 👻) counts from the candle where it sits on the
+  chart (default `--signal-time label`). On a live chart a regular pivot only appears 50
+  candles after its pivot candle, and missed pivots appear at the same moment, drawn back
+  in time. The ghost that moves on the live last candle is provisional and not used.
 * **Reversal Entry Zones:** tracks running highs/lows of EMA 5 of high/low. A reversal
-  confirms when price comes back by `max(0.015% of close, 0.05, 2.8 × ATR 5)`. "Last
-  Signal" is the direction of the latest confirmed reversal, known on the candle it confirms.
+  confirms when price comes back by `max(0.015% of close, 0.05, 2.8 × ATR 5)`, and the
+  label is drawn back at the turning point. With the default `--signal-time label` the
+  condition changes at that turning point; with `confirmed` it changes when the reversal is
+  confirmed (the "Last Signal" row on a live chart).
 * **Smoothed Heiken Ashi:** Red when the smoothed open is above the smoothed close,
   otherwise Green (same as the Pine `col`).
 
@@ -65,7 +67,7 @@ python amitrajdev/strategy.py --signal-time label       # read pivots/reversals 
 | Square-off | **15:15** (close of the 15:10 candle) |
 | Overnight | Indicators run continuously across days, like TradingView, but a signal on the last candle of a day is not carried to the next morning |
 | Costs | None by default (`--cost-pct` to add) |
-| Signal time (`--signal-time`) | `confirmed` (default): the LuxAlgo pivot and Reversal Entry Zones conditions change on the candle where the pivot / reversal is **confirmed**, as on a live chart. `label`: they change on the candle where the label is **drawn** on a finished chart (pivot candle / turning point). `label` matches reading a finished chart but uses later data, so it cannot be traded live |
+| Signal time (`--signal-time`) | `label` (**default**, confirmed by the client): the LuxAlgo pivot and Reversal Entry Zones conditions change on the candle where the label is **drawn** on the chart (pivot candle / turning point), including missed pivots. ⚠️ A label is only drawn later (LuxAlgo: 50 candles after the pivot), so this uses later data and backtest results are better than live trading could achieve. `confirmed`: they change when the pivot / reversal is confirmed, as on a live chart |
 
 ## Chart (`results/chart.html`)
 

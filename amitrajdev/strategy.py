@@ -4,8 +4,10 @@ AMIT RAJDEV - 5-minute reversal strategy backtest (NSE intraday).
 
 Conditions (evaluated on each completed 5-minute candle):
   1. SMA 120 (close)           BUY: close > SMA 120          SELL: close < SMA 120
-  2. LuxAlgo pivots (50)       BUY: latest confirmed pivot is a Low   SELL: a High
-  3. Reversal Entry Zones      BUY: Last Signal = Bullish Reversal    SELL: Bearish Reversal
+  2. LuxAlgo pivots (50)       BUY: latest pivot label is a Low       SELL: a High
+  3. Reversal Entry Zones      BUY: latest label Bullish Reversal     SELL: Bearish Reversal
+     (2 and 3 change where the label sits on the chart by default; --signal-time confirmed
+     uses the confirmation candle instead)
      (Low, Average)
   4. Smoothed Heiken Ashi v1   BUY: candle Green              SELL: candle Red
 Entry : all 4 newly aligned on a candle close (not aligned on the previous candle) and no
@@ -60,7 +62,7 @@ def _label_state(n: int, positions, values) -> np.ndarray:
     return out
 
 
-def add_indicators(df: pd.DataFrame, signal_time: str = "confirmed"):
+def add_indicators(df: pd.DataFrame, signal_time: str = "label"):
     """signal_time="confirmed": LuxAlgo pivot and Reversal Zones signals count from the candle
     where they are confirmed (what a live chart shows). "label": they count from the candle
     where the label is drawn on a finished chart (uses later data -> hindsight)."""
@@ -206,9 +208,10 @@ def main():
     ap.add_argument("--csv", help="load 5m OHLC from CSV instead of yfinance")
     ap.add_argument("--sessions", type=int, default=5, help="trading sessions to backtest (5 = one week)")
     ap.add_argument("--include-today", action="store_true")
-    ap.add_argument("--signal-time", choices=["confirmed", "label"], default="confirmed",
-                    help="confirmed: LuxAlgo/RevZones signals count when confirmed (live). "
-                         "label: they count where the label sits on a finished chart (hindsight)")
+    ap.add_argument("--signal-time", choices=["label", "confirmed"], default="label",
+                    help="label (default, client's reading): LuxAlgo/RevZones signals count where "
+                         "the label sits on the chart (uses later data). confirmed: they count "
+                         "when confirmed, as on a live chart")
     ap.add_argument("--exit-count", choices=["now", "since-entry"], default="since-entry",
                     help="now: 2+ conditions against the trade on the same close; "
                          "since-entry: 2+ conditions that turned against it at any time since entry")
