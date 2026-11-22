@@ -60,6 +60,7 @@ odsoftware/
   strategy.py
   data.py
   verify.py
+  portfolio.py
   indicators/  atr_trail.py  dema.py  sma.py   (closed source: no .pine)
   tv_download/ download.mjs  package.json (TradingView export with your account)
 ```

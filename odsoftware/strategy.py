@@ -164,6 +164,20 @@ def run(df: pd.DataFrame, start_date) -> list[Trade]:
     return trades
 
 
+def prepare(raw: pd.DataFrame, n_sessions: int, include_today: bool = False):
+    """3-minute candles with indicators, and the last `n_sessions` complete, warmed-up sessions."""
+    df = to_timeframe(clean(raw), TIMEFRAME_MIN)
+    sessions = sorted(set(df.index.date))
+    bar = pd.Timedelta(minutes=TIMEFRAME_MIN)
+    if not include_today and (df.index[-1] + bar).time() < pd.Timestamp("15:15").time():
+        sessions = sessions[:-1]                                           # session not finished
+        df = df[df.index.date <= sessions[-1]]
+    df = add_indicators(df)
+    warm_from = df.index[df["warm"]][0].date()
+    window = [d for d in sessions if d >= warm_from][-n_sessions:]
+    return df, window
+
+
 # ---------------------------------------------------------------- reporting
 def report(trades: list[Trade], qty: int, cost_pct: float):
     rows = []
@@ -216,15 +230,7 @@ def main():
     a = ap.parse_args()
 
     raw = load_csv(a.csv) if a.csv else fetch_1m(a.symbol, days=30)
-    df = to_timeframe(clean(raw), TIMEFRAME_MIN)
-    sessions = sorted(set(df.index.date))
-    bar = pd.Timedelta(minutes=TIMEFRAME_MIN)
-    if not a.include_today and (df.index[-1] + bar).time() < pd.Timestamp("15:15").time():
-        sessions = sessions[:-1]                                           # session not finished
-        df = df[df.index.date <= sessions[-1]]
-    df = add_indicators(df)
-    warm_from = df.index[df["warm"]][0].date()
-    window = [d for d in sessions if d >= warm_from][-a.sessions:]
+    df, window = prepare(raw, a.sessions, a.include_today)
     trades = run(df, window[0])
     tl, lines = report(trades, a.qty, a.cost_pct)
 

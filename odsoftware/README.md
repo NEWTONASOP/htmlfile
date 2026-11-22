@@ -19,6 +19,7 @@ client's exits: a 1% stop and a trailing stop after the target.
 | `indicators/dema.py` | Chart line "Fast MA": DEMA 20 on close (Pine `ta.dema`) |
 | `indicators/sma.py` | Chart line "Trend MA line": SMA 40 on close (Pine `ta.sma`) |
 | `data.py` | Data loader: yfinance 1m → 3m candles, or a CSV (the TradingView export) |
+| `portfolio.py` | The same rules on a basket of stocks (default: 10 largest NIFTY stocks, ₹1,00,000 split equally), with NSE charges |
 | `verify.py` | Checks the rebuild against TradingView: lines, arrows, and a replay of the script's own trades |
 | `tv_download/download.mjs` | Downloads candles, the script's lines/arrows and its Strategy-Tester trades with your account |
 | `data/` | TradingView exports (gitignored) |
@@ -116,9 +117,22 @@ python odsoftware/strategy.py                                            # ^NSEI
 python odsoftware/strategy.py --csv odsoftware/data/NSE_NIFTY_3.csv --sessions 60   # TradingView candles
 python odsoftware/strategy.py --symbol RELIANCE.NS --qty 100              # a stock
 python odsoftware/strategy.py --day 2026-11-17                           # print one day's trades
+python odsoftware/portfolio.py                                           # 10 NIFTY stocks, Rs 1,00,000
+python odsoftware/portfolio.py --capital 500000 --symbols TCS.NS INFY.NS
 python odsoftware/verify.py odsoftware/data/NSE_NIFTY_3.csv --yahoo      # rebuild vs TradingView
 python odsoftware/verify.py odsoftware/data/NSE_RELIANCE_3.csv --yahoo --symbol RELIANCE.NS
 ```
+
+## Basket of stocks (`portfolio.py`)
+
+- Stocks (default): RELIANCE, HDFCBANK, ICICIBANK, INFY, BHARTIARTL, TCS, LT, ITC, SBIN, KOTAKBANK.
+- Capital split equally; each trade takes `floor(stock's share / entry price)` shares; no
+  compounding. Same rules as `strategy.py`, Yahoo data (last ~18–20 sessions).
+- Charges at NSE stock-futures rates (shorts are held overnight, so futures in practice),
+  approximate: brokerage 0.03% or ₹20 per order (lower), STT 0.02% on sell, exchange 0.00173%,
+  SEBI ₹10/crore, stamp duty 0.002% on buy, GST 18% on brokerage + exchange + SEBI.
+- Output: `results/portfolio_summary.txt` (per stock and total) and `results/portfolio_trades.csv`.
+  A trade still open when the data ends is valued at the last close.
 
 ## Comparing with the TradingView chart
 
