@@ -1,8 +1,8 @@
 # SUNEET – Williams Fractal 7 (NIFTY, 3-minute)
 
 Intraday backtest on NIFTY 50 3-minute candles with TradingView's built-in **Williams fractal**
-(Periods 7): CE on the red arrow, PE on the green arrow, stop at the arrow candle's wick, exit and
-reverse on the opposite arrow. Data: unofficial `yfinance` API.
+(Periods 7): CE on the red arrow, PE on the green arrow, entered when the arrow appears live,
+stop at the arrow candle's wick, exit and reverse on the opposite arrow. Data: unofficial `yfinance` API.
 
 ## Folder
 
@@ -35,15 +35,15 @@ python suneet/strategy.py --csv nifty_3m.csv    # Datetime,Open,High,Low,Close (
 | Indicator | Williams fractal, Periods **7**: a candle whose high (low) is strictly above (below) the 7 candles after it and the 7 candles before it; up to 4 candles right before it may be equal (TradingView's rule) |
 | CE (BUY) | **Red arrow** below a candle (down fractal, swing low) |
 | PE (SELL) | **Green arrow** above a candle (up fractal, swing high) |
-| Signal candle | **The arrow candle itself**, where the arrow sits on the chart (client's choice). ⚠️ **Hindsight:** the arrow is confirmed only 7 candles (21 minutes) later, so live trading can't enter there and these results are overstated |
-| Entry | Open of the candle after the arrow candle |
-| Stop loss | Arrow candle's **low wick** (CE) / **high wick** (PE). Hit when a later candle's low ≤ SL (CE) or high ≥ SL (PE); fills at the SL, or at the open if price gapped through |
-| Exit / reversal | The next **opposite arrow** exits the trade and opens the other side at the next candle's open. One position at a time |
+| Signal | **When the arrow appears live**: the arrow on candle X is confirmed when candle **X+7** closes (21 minutes later on 3m); TradingView then draws it back on X |
+| Entry | Open of the candle after the confirming candle (X+8) |
+| Stop loss | The arrow candle's (X) **low wick** (CE) / **high wick** (PE). Checked from the entry candle on: hit when a candle's low ≤ SL (CE) or high ≥ SL (PE); fills at the SL, or at the open if price gapped through |
+| Exit / reversal | When the next **opposite arrow** appears, exit and open the other side at the next candle's open. One position at a time |
 | Same-side arrow in a trade | Ignored (stop unchanged) |
 | After a stop loss | The next arrow of either side opens a new trade |
 | Both arrows on one candle | No signal |
 | Session | Entries only on candles opening **before 15:00**; anything open is squared off at **15:15** (close of the 15:12 candle). Arrows are not carried to the next day |
-| Execution | Signal on the arrow candle's close, fill at the next open; if a candle hits the stop, the stop is taken before any new arrow on that candle |
+| Execution | Signal on the confirming candle's close, fill at the next open; if a candle hits the stop, the stop is taken before any new arrow on that candle |
 | Options | P&L is in **NIFTY index points** (Yahoo has no option prices). Each trade lists its option: ATM = entry price rounded to 50; **CE strike = ATM − 50** (50 points ITM), **PE strike = ATM + 100** (100 points ITM); nearest weekly expiry (Tuesday, or the trading day before if Tuesday is a holiday in the data); on expiry day itself, next week's expiry |
 | Quantity / costs | `--qty` (default **65**, 1 NIFTY lot) × index points; `--cost-pct` round trip (default 0) |
 
@@ -65,8 +65,10 @@ python suneet/strategy.py --csv nifty_3m.csv    # Datetime,Open,High,Low,Close (
   0 differences**. It also equals a line-by-line copy of the Pine loops on synthetic data with
   many equal highs/lows (the "equal candle" rule used 28–32 times per dataset).
 - **Trades:** the engine was compared with a separately written simulator (per-trade forward
-  scan) on 3 synthetic datasets: identical trades. Invariants: entry = next candle after an arrow
-  of that side, stop = that candle's wick, no overlap, no entry from 15:00, everything out by
-  15:12, stop-loss fills at the stop or a gap open.
-- **Hand-checked:** CE 18 Nov 2026: red arrow 09:45 (low 25206.30 below the 7 lows before and
-  after), entry 09:48 open 25250.75, exit 10:06 open 25285.05 on the 10:03 green arrow (+34.3).
+  scan, confirmation times computed by its own loop) on 3 synthetic datasets: identical trades.
+  Invariants: signal = arrow candle + 7, entry = next candle, stop = arrow candle's wick, no
+  overlap, no entry from 15:00, everything out by 15:12, stop-loss fills at the stop or a gap open.
+- **Hand-checked:** CE 18 Nov 2026: red arrow on 09:45 (low 25206.30 below the 7 lows before and
+  after) appears at the 10:06 close; entry 10:09 open 25288.25, SL 25206.30, strike 25250 (ATM
+  25300 − 50); the 10:03 green arrow appears at 10:24 → exit and reverse at the 10:27 open 25255.55
+  (−32.70).

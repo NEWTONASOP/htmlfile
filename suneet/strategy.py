@@ -5,10 +5,10 @@ SUNEET - Williams Fractal 7 strategy backtest (NIFTY index, 3-minute candles).
 Indicator  : TradingView built-in Williams fractal, Periods 7 (indicators/williams_fractal.py).
 CE (BUY)   : red arrow below a candle (down fractal, swing low).
 PE (SELL)  : green arrow above a candle (up fractal, swing high).
-Signal     : the arrow candle itself, as the arrow sits on the chart (label position). The
-             arrow is only confirmed 7 candles (21 minutes) later, so this uses hindsight.
-Entry      : open of the candle after the arrow candle.
-Stop loss  : the arrow candle's low (CE) / high (PE), wick, checked on every candle.
+Signal     : when the arrow appears live: the arrow on candle X is confirmed when candle X+7
+             closes (21 minutes later on 3m); TradingView then draws it back on candle X.
+Entry      : open of the candle after the confirming candle (X+8).
+Stop loss  : the arrow candle's (X) low (CE) / high (PE), wick, checked on every candle.
 Exit       : the next opposite arrow exits and reverses at the next open; one position at a
              time. A same-side arrow while in a trade is ignored. After a stop, the next arrow
              of either side opens a new trade.
@@ -78,7 +78,8 @@ def option_for(side: str, spot: float, day: date, trading_days: set[date], last_
 @dataclass
 class Trade:
     side: str                    # CE / PE
-    signal_time: pd.Timestamp    # arrow candle
+    arrow_time: pd.Timestamp     # candle the arrow is drawn on (stop-loss candle)
+    signal_time: pd.Timestamp    # candle on whose close the arrow appears (arrow + 7 candles)
     entry_time: pd.Timestamp
     entry: float                 # NIFTY index
     stop: float                  # arrow candle low (CE) / high (PE)
@@ -94,13 +95,20 @@ class Trade:
 
 
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    return df.join(williams_fractal(df, PERIODS))
+    """Arrows on their candle, and the same arrows on the candle where they become known."""
+    df = df.join(williams_fractal(df, PERIODS))
+    df["ce_signal"] = df["down_arrow"].shift(PERIODS, fill_value=False)   # red arrow appears
+    df["pe_signal"] = df["up_arrow"].shift(PERIODS, fill_value=False)     # green arrow appears
+    df["arrow_low"] = df["Low"].shift(PERIODS)                            # CE stop: arrow candle low
+    df["arrow_high"] = df["High"].shift(PERIODS)                          # PE stop: arrow candle high
+    return df
 
 
 def run(df: pd.DataFrame, start_date) -> list[Trade]:
     idx, dates = df.index, df.index.date
     O, H, L, C = (df[k].to_numpy() for k in ("Open", "High", "Low", "Close"))
-    UP, DOWN = df["up_arrow"].to_numpy(), df["down_arrow"].to_numpy()
+    UP, DOWN = df["pe_signal"].to_numpy(), df["ce_signal"].to_numpy()
+    ALOW, AHIGH = df["arrow_low"].to_numpy(), df["arrow_high"].to_numpy()
     bar = pd.Timedelta(minutes=TIMEFRAME_MIN)
     trading_days, last_day = set(dates), dates[-1]
     trades: list[Trade] = []
@@ -124,9 +132,9 @@ def run(df: pd.DataFrame, start_date) -> list[Trade]:
             if pos is not None and pos.side != side:
                 close(ts, O[i], "Opposite arrow")
             if pos is None and ts.time() < ENTRY_CUTOFF:
-                stop = L[sig_i] if side == "CE" else H[sig_i]
+                stop = ALOW[sig_i] if side == "CE" else AHIGH[sig_i]
                 strike, exp = option_for(side, O[i], dates[i], trading_days, last_day)
-                pos = Trade(side, idx[sig_i], ts, float(O[i]), float(stop), strike, exp)
+                pos = Trade(side, idx[sig_i - PERIODS], idx[sig_i], ts, float(O[i]), float(stop), strike, exp)
         pending = None
 
         # 2) stop loss inside the candle (wick)
@@ -140,7 +148,7 @@ def run(df: pd.DataFrame, start_date) -> list[Trade]:
         if pos is not None and (end >= SQUARE_OFF or last_of_day):
             close(ts, C[i], "Square-off 15:15")
 
-        # 4) arrow on this candle -> act at the next open
+        # 4) arrow that appears on this candle's close -> act at the next open
         if dates[i] < start_date or end >= SQUARE_OFF or last_of_day:
             continue
         if DOWN[i] and UP[i]:
@@ -166,7 +174,7 @@ def report(trades: list[Trade], qty: int, cost_pct: float):
     tl = pd.DataFrame(rows)
     if tl.empty:
         return tl, ["No trades in the backtest window."]
-    for col in ("signal_time", "entry_time", "exit_time"):
+    for col in ("arrow_time", "signal_time", "entry_time", "exit_time"):
         tl[col] = pd.to_datetime(tl[col]).dt.strftime("%Y-%m-%d %H:%M")
     for col in ("entry", "stop", "exit"):
         tl[col] = tl[col].round(2)
@@ -213,8 +221,8 @@ def main():
     src = a.csv if a.csv else f"{SYMBOL} (yfinance 1m -> 3m)"
     title = (f"SUNEET Williams Fractal {PERIODS} | {src} | {TIMEFRAME_MIN}m | "
              f"{window[0]} -> {window[-1]} ({len(window)} sessions)")
-    header = (f"{title}\nCE on red arrow / PE on green arrow (arrow candle = signal, hindsight), entry next "
-              f"open, SL arrow candle wick, exit + reverse on the opposite arrow, entries until "
+    header = (f"{title}\nCE on red arrow / PE on green arrow when the arrow appears ({PERIODS} candles after "
+              f"its candle), entry next open, SL arrow candle wick, exit + reverse on the opposite arrow, entries until "
               f"{ENTRY_CUTOFF:%H:%M}, exit by {SQUARE_OFF:%H:%M}. P&L in NIFTY index points.\n")
     os.makedirs(a.out, exist_ok=True)
     tl.to_csv(os.path.join(a.out, "trades.csv"), index=False)
@@ -225,7 +233,7 @@ def main():
     print(header)
     show = tl if not a.day or tl.empty else tl[tl.entry_time.str[:10] == a.day]
     if not show.empty:
-        print(show[["side", "signal_time", "entry_time", "entry", "stop", "strike", "expiry",
+        print(show[["side", "arrow_time", "signal_time", "entry_time", "entry", "stop", "strike", "expiry",
                     "exit_time", "exit", "reason", "pnl_pts"]].to_string(index=False))
     print("\n" + "\n".join(lines))
 

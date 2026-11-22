@@ -133,8 +133,8 @@ client reads their chart, then answer questions about the trades.
   at +20 pts no booking: stop to breakeven, then trail 1% behind the best price; no session,
   held overnight like the script. Indian markets only (no BTC).
 - **suneet/** Williams Fractal 7 (TradingView built-in, source in `indicators/`), NIFTY 3m.
-  Red arrow → CE, green → PE; signal = **arrow candle (label position, hindsight)**, entry next
-  open; SL = arrow candle wick; opposite arrow → exit + reverse; same-side arrow ignored; after
+  Red arrow → CE, green → PE; signal = **when the arrow appears (arrow candle + 7, live)**, entry
+  next open; SL = arrow candle wick; opposite arrow → exit + reverse; same-side arrow ignored; after
   SL any arrow re-enters; entries before 15:00, square-off 15:15. P&L in index points; each trade
   lists CE ATM−50 / PE ATM+100, nearest Tuesday expiry (next week on expiry day). Port = TV
   output 444/444 arrows.
