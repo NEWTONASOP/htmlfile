@@ -15,7 +15,7 @@ TradingView Pine source where one was provided.
 | ASHISHKUMARVERMA – ORB | [`ashishkumarverma/`](ashishkumarverma/README.md) | 15m | Opening/alert candle, RVOL 20, gap filter, 9 EMA exit |
 | AMIT RAJDEV – 5-min Reversal | [`amitrajdev/`](amitrajdev/README.md) | 5m | SMA 120, LuxAlgo Pivots, Reversal Entry Zones, Smoothed Heiken Ashi |
 | PRAFUL – ICT Session Scalper (gold) | [`praful/`](praful/README.md) | 5m | ICT Session Scalper Toolkit |
-| OD SOFTWARE – closed-source TradingView strategy, rebuilt (NIFTY) | [`odsoftware/`](odsoftware/README.md) | 3m | DEMA 20 × SMA 40 arrows (decoded), 1% SL, trailing SL after +1% |
+| OD SOFTWARE – closed-source TradingView strategy, rebuilt (NIFTY, NSE stocks) | [`odsoftware/`](odsoftware/README.md) | 3m | Script's trade signal decoded (EMA 4 × ATR trail 1.7 × ATR 7), stop = closer of 10 pts / 1%, trailing after +20 pts |
 
 ```
 neeraj/
@@ -60,7 +60,7 @@ odsoftware/
   strategy.py
   data.py
   verify.py
-  indicators/  dema.py  sma.py            (closed source: no .pine)
+  indicators/  atr_trail.py  dema.py  sma.py   (closed source: no .pine)
   tv_download/ download.mjs  package.json (TradingView export with your account)
 ```
 

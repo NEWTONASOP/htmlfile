@@ -123,10 +123,10 @@ client reads their chart, then answer questions about the trades.
   every signal a trade, 0.01 lot, +$3 target, exit on a ✗ sweep in the trade's direction,
   indicator SL (sweep extreme ± 2 ticks, capped 3×ATR14), $0.30 spread, SMT vs silver.
 - **odsoftware/** closed-source invite-only TradingView strategy "Od trading software no wm",
-  decoded from its outputs: arrows = DEMA 20 (close) crossing SMA 40 (close), 119/119 on
-  NIFTY 3m. Rules: arrow → next open, reverse on the opposite arrow, 1% SL, at +1% stop to
-  breakeven then trail 1% behind the best price; entries before 15:00, square-off 15:15;
-  NIFTY 3m, Indian markets only (no BTC). The script's own Strategy-Tester trades come from a
-  different signal, also decoded: ATR trailing stop on EMA 4 of close (1.7 × ATR 7) flips,
-  next open, 10/20-point SL/TP from the next candle, reversal, no session; NIFTY 152/152 trades
-  identical (`verify.py`). Open question: which rules the client wants backtested.
+  decoded from its outputs. Its trades: ATR trailing stop on EMA 4 of close (1.7 × ATR 7);
+  EMA crossing it → next open, reverse on the opposite signal, 10/20-point SL/TP from the next
+  candle, held overnight (replay 616/620 TradingView trades on NIFTY, RELIANCE, SBIN, HDFCBANK;
+  misses only around TradingView margin calls on stocks). Its DEMA 20 × SMA 40 arrows are
+  display only. **Backtest (confirmed):** the script's entries + stop = closer of 10 pts / 1%;
+  at +20 pts no booking: stop to breakeven, then trail 1% behind the best price; no session,
+  held overnight like the script. Indian markets only (no BTC).
