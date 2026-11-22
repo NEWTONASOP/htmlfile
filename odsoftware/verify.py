@@ -28,6 +28,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))  # this strategy folder only
 from data import IST, fetch_1m, load_csv, clean, to_timeframe  # noqa: E402
 from strategy import add_indicators, TIMEFRAME_MIN  # noqa: E402
+from indicators.atr_trail import atr_trail  # noqa: E402
 
 
 def load_tv(path: str) -> pd.DataFrame:
@@ -38,6 +39,72 @@ def load_tv(path: str) -> pd.DataFrame:
 
 def arrows(df: pd.DataFrame) -> pd.Series:
     return pd.Series(np.where(df.buy_arrow, "BUY", np.where(df.sell_arrow, "SELL", "")), index=df.index)
+
+
+def replay_script(df: pd.DataFrame, sl: float = 10, tp: float = 20) -> list[tuple]:
+    """The script's own Strategy Tester (default inputs), to compare with its trade list.
+
+    Entry at the next open after an ATR-trail flip; one position; an opposite flip reverses it;
+    exits at entry -/+ sl / tp points (Trade Mode "Point"), active from the candle after entry;
+    when one candle touches both, TradingView's path rule (open -> nearer extreme first).
+    No session rules. Returns (entry_time, side, exit_time or None, kind).
+    """
+    sig = atr_trail(df)
+    O, H, L = (df[k].to_numpy() for k in ("Open", "High", "Low"))
+    buy, sell = sig.trail_buy.to_numpy(), sig.trail_sell.to_numpy()
+    t = df.index
+    out, pos, pend = [], None, None
+    for i in range(len(df)):
+        if pend is not None:
+            if pos is not None and pos[1] != pend:
+                out.append((t[pos[0]], pos[1], t[i], "reverse"))
+                pos = None
+            if pos is None:
+                pos = (i, pend, O[i])
+            pend = None
+        if pos is not None and pos[0] < i:
+            k, side, e = pos
+            stop, tgt = (e - sl, e + tp) if side == "LONG" else (e + sl, e - tp)
+            hs = L[i] <= stop if side == "LONG" else H[i] >= stop
+            ht = H[i] >= tgt if side == "LONG" else L[i] <= tgt
+            if hs and ht:
+                high_first = abs(H[i] - O[i]) < abs(L[i] - O[i])
+                ht = high_first if side == "LONG" else not high_first
+                hs = not ht
+            if hs or ht:
+                out.append((t[k], side, t[i], "SL" if hs else "Profit"))
+                pos = None
+        if buy[i]:
+            pend = "LONG"
+        elif sell[i]:
+            pend = "SHORT"
+    if pos is not None:
+        out.append((t[pos[0]], pos[1], None, "open"))
+    return out
+
+
+def compare_tv_trades(df: pd.DataFrame, path: str):
+    tvt = pd.read_csv(path)
+    kind = {"Long SL": "SL", "Short SL": "SL", "Long Profit": "Profit", "Short Profit": "Profit",
+            "Long": "reverse", "Short": "reverse"}
+    rows = []
+    for r in tvt.itertuples():
+        if r.reason == "Margin call":              # TradingView partial close from position sizing
+            continue
+        et = pd.Timestamp(r.entry_time).tz_convert(IST)
+        k = kind.get(r.reason, "open") if isinstance(r.reason, str) else "open"
+        xt = None if k == "open" else pd.Timestamp(r.exit_time).tz_convert(IST)
+        rows.append((et, r.side, xt, k))
+    tv_set, py = set(rows), replay_script(df)
+    py_set = set(py)
+    same = len(tv_set & py_set)
+    print(f"Script trades (ATR-trail entries, 10/20-pt exits, reversals): TradingView {len(tv_set)} "
+          f"(+{len(tvt) - len(rows)} margin-call rows skipped), Python replay {len(py_set)}, "
+          f"identical entry+exit {same}")
+    for et, side, xt, k in sorted(tv_set ^ py_set, key=lambda x: x[0])[:10]:
+        who = "TV only" if (et, side, xt, k) in tv_set else "Python only"
+        print(f"  {who:11} {et:%Y-%m-%d %H:%M} {side:5} -> {xt:%Y-%m-%d %H:%M} {k}" if xt is not None
+              else f"  {who:11} {et:%Y-%m-%d %H:%M} {side:5} -> open")
 
 
 def main():
@@ -72,6 +139,10 @@ def main():
           f"Python reproduces {same}, candles that differ {int(diff.sum())}")
     for ts in tv_arrow.index[diff][:20]:
         print(f"  {ts:%Y-%m-%d %H:%M}  TV={tv_arrow[ts] or '-':4}  Python={py_arrow[ts] or '-'}")
+
+    trades_csv = a.csv[:-4] + "_tv_trades.csv"
+    if Path(trades_csv).exists():
+        compare_tv_trades(py, trades_csv)
 
     if a.yahoo:
         yh = add_indicators(to_timeframe(clean(fetch_1m(a.symbol, days=30)), TIMEFRAME_MIN))

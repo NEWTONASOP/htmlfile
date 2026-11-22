@@ -14,6 +14,7 @@ account that has access, and every piece was checked against those outputs.
 | `strategy.py` | Backtest: arrow entries, reversals, 1% SL, trailing SL after +1%, square-off, report |
 | `indicators/dema.py` | Fast MA: DEMA 20 on close (Pine `ta.dema`, SMA-seeded `ta.ema`) |
 | `indicators/sma.py` | Slow / trend MA: SMA 40 on close (Pine `ta.sma`) |
+| `indicators/atr_trail.py` | The script's **trade signal**: ATR trailing stop on EMA 4 of close (ATR 7 × 1.7) |
 | `data.py` | Data loader: yfinance 1m → 3m candles, or a CSV (the TradingView export) |
 | `verify.py` | Checks the rebuild against TradingView's plotted lines and arrows (and optionally Yahoo) |
 | `tv_download/download.mjs` | Downloads candles, the script's lines/arrows and its Strategy-Tester trades from TradingView with your account |
@@ -39,10 +40,31 @@ off. The other parts of the script do **not** change the arrows: a Supertrend-st
 (EMA 4, TR 7, factor 1.7), an "OD" band (22, factor 2), bar colours, a 30-stock screener
 table, pivots and day high/low.
 
-**Not reproduced:** the script's own Strategy Tester (point mode, SL 10 / target 20, one
-position) made 152 trades in the same period, and those entries do **not** follow the arrows:
-only 40 of 152 start on an arrow candle or the candle after it (21 at the next open). The logic
-behind the rest isn't visible in the outputs, so it can't be rebuilt reliably. This backtest uses the client's own rules on the arrows instead (below).
+### The script's own trades (Strategy Tester) – decoded too
+
+The trades the script draws on the chart and lists in its Strategy Tester do **not** come
+from the arrows (only 40 of 152 start at an arrow). They come from a separate signal:
+
+| Part | Decoded as |
+|---|---|
+| Signal line | **EMA 4 of close** (input `st_emaPer` 4) |
+| Trail | ATR trailing stop on that EMA: distance **1.7 × ATR 7** (inputs `st_factor` 1.7, `TrPer` 7; ATR = `ta.atr`) |
+| BUY / SELL | EMA crosses **above / below** the trail (they always alternate) → enter at the next candle's open |
+| Exit | **Stop 10 points, target 20 points** from entry (Trade Mode "Point"), active from the candle after entry; an opposite signal **reverses** the trade |
+| Session | none: trades are held overnight |
+
+Checks: on NSE:NIFTY 3m the Python replay gives **all 152 TradingView trades identically**
+(entry candle, side, exit candle, exit reason). On NSE:RELIANCE 3m it gives all 163
+TradingView trades plus one extra (7 Oct 09:18 SELL, right after an overnight stop-loss);
+TradingView also splits 40 RELIANCE trades with "Margin call" rows caused by the script's
+position sizing, most likely also why it skipped that trade. Changing every input on
+TradingView one at a time showed that only `st_emaPer`, `TrPer` and `st_factor` move the
+trades (the MAs, the OD inputs and smoothing don't); with TrPer 14 the Python replay matched all
+150 trades, with st_factor 3 81 of 82 and with st_emaPer 8 105 of 108 (the misses are candles
+where the EMA and trail were within a few points).
+
+The backtest in `strategy.py` uses the client's rules on the **arrows** (below), not the
+script's trade signal.
 
 ## Rules as implemented
 
@@ -147,6 +169,8 @@ BUY/SELL arrows) and `NSE_NIFTY_3_tv_trades.csv` (the script's Strategy-Tester t
 
 - Python SMA 40 / DEMA 20 equal the script's plotted lines (difference 0.000000) and the Python
   arrows equal all 119 TradingView arrows (`verify.py`).
+- `verify.py` also replays the script's own trades (ATR-trail entries, 10/20-point exits) and
+  compares them with the downloaded `_tv_trades.csv`: NIFTY 152 / 152 identical.
 - The trade engine was compared with a separately written simulator (per-trade forward scan,
   trailing stop recomputed from the running high/low) on 4 synthetic datasets, a forced
   gap-through-stop case and the TradingView NIFTY data: **identical trades** in all cases.
