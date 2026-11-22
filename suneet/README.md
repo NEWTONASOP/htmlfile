@@ -70,7 +70,3 @@ python suneet/strategy.py --csv nifty_3m.csv    # Datetime,Open,High,Low,Close (
   15:12, stop-loss fills at the stop or a gap open.
 - **Hand-checked:** CE 18 Nov 2026: red arrow 09:45 (low 25206.30 below the 7 lows before and
   after), entry 09:48 open 25250.75, exit 10:06 open 25285.05 on the 10:03 green arrow (+34.3).
-- **Hindsight check** (27 Oct – 20 Nov 2026, index points, no costs): entering at the arrow
-  candle gives 160 trades, 88.8% winners, +8,763 points; with the same rules but entering when
-  the arrow is confirmed (7 candles later) it is 159 trades, 43.4% winners, +1,206 points. The gap
-  is the hindsight of trading the arrow candle.

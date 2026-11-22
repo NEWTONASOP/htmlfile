@@ -88,6 +88,8 @@ client reads their chart, then answer questions about the trades.
 
 - Trade lists in **short text tables in a code block**: `Date  Side  Entry  Exit  Reason`.
   **No prices or P&L unless asked.**
+- Show results **only for the rules the user confirmed**. No side-by-side "what if" versions
+  (e.g. hindsight vs live) unless the user asks; mention a caveat once at most.
 - Be concise; Hinglish replies are fine when the user writes Hinglish.
 - When asked "why this trade", show the few candles/values that decided it.
 - "Last N days" = trading sessions in that calendar window; say which dates.
