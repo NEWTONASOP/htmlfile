@@ -13,6 +13,7 @@ how many TradingView arrows the Yahoo prices reproduce on the dates both cover.
 Usage (from the repository root):
     python odsoftware/verify.py odsoftware/data/NSE_NIFTY_3.csv
     python odsoftware/verify.py odsoftware/data/NSE_NIFTY_3.csv --yahoo
+    python odsoftware/verify.py odsoftware/data/NSE_RELIANCE_3.csv --yahoo --symbol RELIANCE.NS
 """
 from __future__ import annotations
 
@@ -43,6 +44,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("csv")
     ap.add_argument("--yahoo", action="store_true", help="also compare arrows built from yfinance data")
+    ap.add_argument("--symbol", default="^NSEI", help="yfinance symbol for --yahoo (e.g. RELIANCE.NS)")
     a = ap.parse_args()
 
     tv = load_tv(a.csv)
@@ -72,7 +74,7 @@ def main():
         print(f"  {ts:%Y-%m-%d %H:%M}  TV={tv_arrow[ts] or '-':4}  Python={py_arrow[ts] or '-'}")
 
     if a.yahoo:
-        yh = add_indicators(to_timeframe(clean(fetch_1m("^NSEI", days=30)), TIMEFRAME_MIN))
+        yh = add_indicators(to_timeframe(clean(fetch_1m(a.symbol, days=30)), TIMEFRAME_MIN))
         yh = yh[yh["warm"]]
         both = tv_arrow.index.intersection(yh.index)
         if len(both) == 0:
@@ -82,7 +84,7 @@ def main():
         days = sorted(set(both.date))
         n = int((ta != "").sum())
         hit = int(((ta == ya) & (ta != "")).sum())
-        print(f"Yahoo ^NSEI 1m->3m vs TradingView, {days[0]} -> {days[-1]} ({len(days)} sessions, "
+        print(f"Yahoo {a.symbol} 1m->3m vs TradingView, {days[0]} -> {days[-1]} ({len(days)} sessions, "
               f"{len(both)} candles): TV arrows {n}, same candle and side on Yahoo {hit}, "
               f"Yahoo-only arrows {int(((ya != '') & (ta == '')).sum())}")
         dd = ta != ya

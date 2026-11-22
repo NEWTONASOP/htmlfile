@@ -32,6 +32,8 @@ There is no `.pine` file: the script is closed source.
 | **SELL arrow** | **DEMA 20 crosses below SMA 40** on a closed candle | 59 of 59 after warm-up |
 | | | **119 / 119 arrows, 0 missed, 0 extra** |
 
+Also checked on **NSE:RELIANCE 3m** (same period): lines identical, **122 / 122 arrows**.
+
 The script's settings say the same: Slow MA 40 SMA, Fast MA 20 DEMA, both on close, smoothing
 off. The other parts of the script do **not** change the arrows: a Supertrend-style trail
 (EMA 4, TR 7, factor 1.7), an "OD" band (22, factor 2), bar colours, a 30-stock screener
@@ -46,7 +48,7 @@ behind the rest isn't visible in the outputs, so it can't be rebuilt reliably. T
 
 | Item | Implementation |
 |---|---|
-| Timeframe | 3-minute candles, NIFTY 50 index (`NSE:NIFTY` / `^NSEI`), IST |
+| Timeframe | 3-minute candles, IST. Default NIFTY 50 index (`NSE:NIFTY` / `^NSEI`); NSE stocks with `--symbol RELIANCE.NS --qty <shares>` |
 | BUY | BUY arrow (DEMA 20 crosses **above** SMA 40) on a closed candle → buy at the **next candle's open** |
 | SELL | SELL arrow (DEMA 20 crosses **below** SMA 40) → sell (short) at the next candle's open |
 | Reversal | An opposite arrow exits the open trade and enters the other side at the same open. One position at a time |
@@ -71,8 +73,10 @@ Assumed (not specified by the client): the 15:00 last-entry time.
   15:12, 120 candles a day); Yahoo continues to 15:29. The extra Yahoo candles shift the
   SMA/DEMA, so candles from 15:15 on are dropped. With that, Yahoo reproduces **47 of 48**
   TradingView arrows over 27 Oct – 20 Nov 2026.
+- RELIANCE: TradingView's 3-minute data also stops at 15:15. Yahoo `RELIANCE.NS` closes equal
+  TradingView's on every candle checked (2,160) and reproduce **62 of 63** arrows.
 - **Muhurat session** (Sun 8 Nov 2026, 19 candles on TradingView's own grid): Yahoo doesn't
-  have it, which is the one arrow difference left (9 Nov 09:36). A 3-minute CSV is used as it
+  have it, which is the one arrow difference left on both symbols (9 Nov morning). A 3-minute CSV is used as it
   is, so the TradingView candles stay exactly as on the chart.
 - Yahoo prices differ slightly from TradingView (opens of the 09:15 candle by up to ±16 points),
   so an arrow decided by a few points can differ. Use the TradingView export for chart-exact
@@ -89,7 +93,18 @@ python odsoftware/strategy.py --csv odsoftware/data/NSE_NIFTY_3.csv --sessions 6
 python odsoftware/strategy.py --qty 65 --cost-pct 0.02
 python odsoftware/strategy.py --day 2026-11-17                          # print one day's trades
 python odsoftware/verify.py odsoftware/data/NSE_NIFTY_3.csv --yahoo     # check rebuild vs TradingView
+python odsoftware/strategy.py --symbol RELIANCE.NS --qty 100             # a stock
+python odsoftware/verify.py odsoftware/data/NSE_RELIANCE_3.csv --yahoo --symbol RELIANCE.NS
 ```
+
+## Comparing with the TradingView chart
+
+Compare the **arrows**, not the script's Strategy Tester list (that uses the script's own
+10/20-point exits and other entries, see above). On the chart: 3-minute timeframe, regular
+session, script inputs left at default (Fast MA 20 DEMA, Slow MA 40 SMA). The arrow sits on the
+crossover candle; this backtest's entry is the **next** candle's open (arrow time + 3 minutes).
+Our arrows use closed candles only: on a live, still-forming candle the DEMA can cross and
+uncross, so an arrow may show and vanish before that candle closes.
 
 ## TradingView downloader
 

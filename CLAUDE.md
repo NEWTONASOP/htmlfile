@@ -64,7 +64,7 @@ client reads their chart, then answer questions about the trades.
 | Gold | `GC=F` COMEX futures (**no spot XAUUSD on Yahoo**); silver `SI=F` |
 | 3-minute | not on Yahoo → build from 1m (bins from 09:15) |
 | Options | **not on Yahoo**. NSE F&O bhavcopy = daily close only (`nsearchives.nseindia.com`). Intraday option data needs a broker API (Breeze keeps expired contracts) |
-| TradingView candles / closed-source script outputs | TradingView-API with the user's cookies in `TV_SESSION` / `TV_SIGNATURE` (see `odsoftware/tv_download`). Password login is blocked from servers; send a browser user agent. Free plan: NSE delayed, ~5,000 candles. TradingView `NSE:NIFTY` 3m has **no candles after 15:15** (Yahoo has 15:15–15:29: drop them) |
+| TradingView candles / closed-source script outputs | TradingView-API with the user's cookies in `TV_SESSION` / `TV_SIGNATURE` (see `odsoftware/tv_download`). Password login is blocked from servers; send a browser user agent. Free plan: NSE delayed, ~5,000 candles. TradingView NSE 3m (`NSE:NIFTY`, `NSE:RELIANCE`) has **no candles after 15:15** (Yahoo has 15:15–15:29: drop them) |
 
 - NSE session 09:15–15:30 IST (nothing executes after 15:30). RELIANCE tick ₹0.10;
   NIFTY strikes step 50, lot 65, weekly expiry Tuesday (holiday → previous trading day).
