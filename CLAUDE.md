@@ -64,6 +64,7 @@ client reads their chart, then answer questions about the trades.
 | Gold | `GC=F` COMEX futures (**no spot XAUUSD on Yahoo**); silver `SI=F` |
 | 3-minute | not on Yahoo → build from 1m (bins from 09:15) |
 | Options | **not on Yahoo**. NSE F&O bhavcopy = daily close only (`nsearchives.nseindia.com`). Intraday option data needs a broker API (Breeze keeps expired contracts) |
+| TradingView candles / closed-source script outputs | TradingView-API with the user's cookies in `TV_SESSION` / `TV_SIGNATURE` (see `odsoftware/tv_download`). Password login is blocked from servers; send a browser user agent. Free plan: NSE delayed, ~5,000 candles. TradingView `NSE:NIFTY` 3m has **no candles after 15:15** (Yahoo has 15:15–15:29: drop them) |
 
 - NSE session 09:15–15:30 IST (nothing executes after 15:30). RELIANCE tick ₹0.10;
   NIFTY strikes step 50, lot 65, weekly expiry Tuesday (holiday → previous trading day).
@@ -121,3 +122,9 @@ client reads their chart, then answer questions about the trades.
 - **praful/** ICT Session Scalper Toolkit on gold (`GC=F`), 5m, New York time. A+/B signals,
   every signal a trade, 0.01 lot, +$3 target, exit on a ✗ sweep in the trade's direction,
   indicator SL (sweep extreme ± 2 ticks, capped 3×ATR14), $0.30 spread, SMT vs silver.
+- **odsoftware/** closed-source invite-only TradingView strategy "Od trading software no wm",
+  decoded from its outputs: arrows = DEMA 20 (close) crossing SMA 40 (close), 119/119 on
+  NIFTY 3m. Rules: arrow → next open, reverse on the opposite arrow, 1% SL, at +1% stop to
+  breakeven then trail 1% behind the best price; entries before 15:00, square-off 15:15;
+  NIFTY 3m, Indian markets only (no BTC). The script's own Strategy-Tester trades (point SL 10
+  / TP 20) are not reproduced; their entry logic isn't in the outputs.

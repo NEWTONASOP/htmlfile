@@ -1,0 +1,9 @@
+{
+  "name": "odsoftware-tv-download",
+  "private": true,
+  "type": "module",
+  "description": "Downloads the OD SOFTWARE TradingView script's candles, plots and trades (own account).",
+  "dependencies": {
+    "@mathieuc/tradingview": "4.1.2"
+  }
+}

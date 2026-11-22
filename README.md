@@ -15,6 +15,7 @@ TradingView Pine source where one was provided.
 | ASHISHKUMARVERMA – ORB | [`ashishkumarverma/`](ashishkumarverma/README.md) | 15m | Opening/alert candle, RVOL 20, gap filter, 9 EMA exit |
 | AMIT RAJDEV – 5-min Reversal | [`amitrajdev/`](amitrajdev/README.md) | 5m | SMA 120, LuxAlgo Pivots, Reversal Entry Zones, Smoothed Heiken Ashi |
 | PRAFUL – ICT Session Scalper (gold) | [`praful/`](praful/README.md) | 5m | ICT Session Scalper Toolkit |
+| OD SOFTWARE – closed-source TradingView strategy, rebuilt (NIFTY) | [`odsoftware/`](odsoftware/README.md) | 3m | DEMA 20 × SMA 40 arrows (decoded), 1% SL, trailing SL after +1% |
 
 ```
 neeraj/
@@ -54,6 +55,13 @@ praful/
   strategy.py
   data.py
   indicators/  ict_scalper.py  ict_session_scalper.pine
+odsoftware/
+  README.md
+  strategy.py
+  data.py
+  verify.py
+  indicators/  dema.py  sma.py            (closed source: no .pine)
+  tv_download/ download.mjs  package.json (TradingView export with your account)
 ```
 
 ## Run (from the repository root, or `cd <folder>` and `python strategy.py`)
@@ -67,6 +75,7 @@ python toufik/strategy.py
 python ashishkumarverma/strategy.py
 python amitrajdev/strategy.py
 python praful/strategy.py
+python odsoftware/strategy.py
 ```
 
 Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps about
@@ -84,6 +93,7 @@ Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps a
 !python toufik/strategy.py
 !python ashishkumarverma/strategy.py
 !python amitrajdev/strategy.py
+!python odsoftware/strategy.py
 ```
 
 ## Adding a new person's strategy

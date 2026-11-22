@@ -1,0 +1,3 @@
+# TradingView exports (market data) and Node packages stay local
+data/
+tv_download/node_modules/
