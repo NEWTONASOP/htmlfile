@@ -16,6 +16,7 @@ TradingView Pine source where one was provided.
 | AMIT RAJDEV – 5-min Reversal | [`amitrajdev/`](amitrajdev/README.md) | 5m | SMA 120, LuxAlgo Pivots, Reversal Entry Zones, Smoothed Heiken Ashi |
 | PRAFUL – ICT Session Scalper (gold) | [`praful/`](praful/README.md) | 5m | ICT Session Scalper Toolkit |
 | ALIA – OD SOFTWARE (closed-source TradingView strategy, rebuilt) | [`alia/`](alia/README.md) | 3m | Script's trade signal decoded (EMA 4 × ATR trail 1.7 × ATR 7), stop = closer of 10 pts / 1%, trailing after +20 pts |
+| SUNEET – Williams Fractal 7 (NIFTY) | [`suneet/`](suneet/README.md) | 3m | Williams fractal (Periods 7), CE on red / PE on green arrow, SL arrow wick, reverse on opposite arrow |
 
 ```
 neeraj/
@@ -62,6 +63,11 @@ alia/
   verify.py
   indicators/  atr_trail.py  dema.py  sma.py   (closed source: no .pine)
   tv_download/ download.mjs  package.json (TradingView export with your account)
+suneet/
+  README.md
+  strategy.py
+  data.py
+  indicators/  williams_fractal.py  williams_fractal.pine
 ```
 
 ## Run (from the repository root, or `cd <folder>` and `python strategy.py`)
@@ -76,6 +82,7 @@ python ashishkumarverma/strategy.py
 python amitrajdev/strategy.py
 python praful/strategy.py
 python alia/strategy.py
+python suneet/strategy.py
 ```
 
 Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps about
@@ -94,6 +101,7 @@ Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps a
 !python ashishkumarverma/strategy.py
 !python amitrajdev/strategy.py
 !python alia/strategy.py
+!python suneet/strategy.py
 ```
 
 ## Adding a new person's strategy
