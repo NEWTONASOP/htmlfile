@@ -1,5 +1,5 @@
 {
-  "name": "odsoftware-tv-download",
+  "name": "alia-tv-download",
   "private": true,
   "type": "module",
   "description": "Downloads the OD SOFTWARE TradingView script's candles, plots and trades (own account).",

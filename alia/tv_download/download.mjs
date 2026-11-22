@@ -10,13 +10,13 @@
  *   TV_SIGNATURE  value of the `sessionid_sign` cookie
  *
  * Usage (from the repository root):
- *   npm --prefix odsoftware/tv_download install          # once
- *   node odsoftware/tv_download/download.mjs [SYMBOL] [TIMEFRAME] [BARS]
- *   node odsoftware/tv_download/download.mjs NSE:NIFTY 3 6000
+ *   npm --prefix alia/tv_download install          # once
+ *   node alia/tv_download/download.mjs [SYMBOL] [TIMEFRAME] [BARS]
+ *   node alia/tv_download/download.mjs NSE:NIFTY 3 6000
  *
  * Writes (gitignored):
- *   odsoftware/data/<SYMBOL>_<TF>.csv            candles (IST) + the script's MA lines and arrows
- *   odsoftware/data/<SYMBOL>_<TF>_tv_trades.csv  the script's own Strategy-Tester trade list
+ *   alia/data/<SYMBOL>_<TF>.csv            candles (IST) + the script's MA lines and arrows
+ *   alia/data/<SYMBOL>_<TF>_tv_trades.csv  the script's own Strategy-Tester trade list
  */
 import fs from 'node:fs';
 import path from 'node:path';

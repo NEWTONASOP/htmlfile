@@ -15,7 +15,7 @@ TradingView Pine source where one was provided.
 | ASHISHKUMARVERMA – ORB | [`ashishkumarverma/`](ashishkumarverma/README.md) | 15m | Opening/alert candle, RVOL 20, gap filter, 9 EMA exit |
 | AMIT RAJDEV – 5-min Reversal | [`amitrajdev/`](amitrajdev/README.md) | 5m | SMA 120, LuxAlgo Pivots, Reversal Entry Zones, Smoothed Heiken Ashi |
 | PRAFUL – ICT Session Scalper (gold) | [`praful/`](praful/README.md) | 5m | ICT Session Scalper Toolkit |
-| OD SOFTWARE – closed-source TradingView strategy, rebuilt (NIFTY, NSE stocks) | [`odsoftware/`](odsoftware/README.md) | 3m | Script's trade signal decoded (EMA 4 × ATR trail 1.7 × ATR 7), stop = closer of 10 pts / 1%, trailing after +20 pts |
+| ALIA – OD SOFTWARE (closed-source TradingView strategy, rebuilt) | [`alia/`](alia/README.md) | 3m | Script's trade signal decoded (EMA 4 × ATR trail 1.7 × ATR 7), stop = closer of 10 pts / 1%, trailing after +20 pts |
 
 ```
 neeraj/
@@ -55,7 +55,7 @@ praful/
   strategy.py
   data.py
   indicators/  ict_scalper.py  ict_session_scalper.pine
-odsoftware/
+alia/
   README.md
   strategy.py
   data.py
@@ -75,7 +75,7 @@ python toufik/strategy.py
 python ashishkumarverma/strategy.py
 python amitrajdev/strategy.py
 python praful/strategy.py
-python odsoftware/strategy.py
+python alia/strategy.py
 ```
 
 Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps about
@@ -93,7 +93,7 @@ Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps a
 !python toufik/strategy.py
 !python ashishkumarverma/strategy.py
 !python amitrajdev/strategy.py
-!python odsoftware/strategy.py
+!python alia/strategy.py
 ```
 
 ## Adding a new person's strategy

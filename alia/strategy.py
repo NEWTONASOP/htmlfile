@@ -20,10 +20,10 @@ Fills      : stops and target tracking start on the candle after entry (as the s
 Output     : results/trades.csv, results/summary.txt, results/bars_with_indicators.csv.
 
 Usage (from the repository root):
-    python odsoftware/strategy.py                       # ^NSEI from yfinance, last 20 sessions
-    python odsoftware/strategy.py --csv odsoftware/data/NSE_NIFTY_3.csv --sessions 60
-    python odsoftware/strategy.py --symbol RELIANCE.NS --qty 100
-    python odsoftware/strategy.py --day 2026-11-17
+    python alia/strategy.py                       # ^NSEI from yfinance, last 20 sessions
+    python alia/strategy.py --csv alia/data/NSE_NIFTY_3.csv --sessions 60
+    python alia/strategy.py --symbol RELIANCE.NS --qty 100
+    python alia/strategy.py --day 2026-11-17
 """
 from __future__ import annotations
 
