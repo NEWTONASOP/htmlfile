@@ -16,7 +16,7 @@ TradingView Pine source where one was provided.
 | AMIT RAJDEV – 5-min Reversal | [`amitrajdev/`](amitrajdev/README.md) | 5m | SMA 120, LuxAlgo Pivots, Reversal Entry Zones, Smoothed Heiken Ashi |
 | PRAFUL – ICT Session Scalper (gold) | [`praful/`](praful/README.md) | 5m | ICT Session Scalper Toolkit |
 | ALIA – OD SOFTWARE (closed-source TradingView strategy, rebuilt) | [`alia/`](alia/README.md) | 3m | Script's trade signal decoded (EMA 4 × ATR trail 1.7 × ATR 7), stop = closer of 10 pts / 1%, trailing after +20 pts |
-| SUNEET – Williams Fractal 7 (NIFTY) | [`suneet/`](suneet/README.md) | 3m | Williams fractal (Periods 7), CE on red / PE on green arrow, SL arrow wick, reverse on opposite arrow |
+| SUNEET – Williams Fractal 7 (NIFTY) | [`suneet/`](suneet/README.md) | 1m | Williams fractal (Periods 7), CE on red / PE on green arrow, SL arrow wick, reverse on opposite arrow |
 
 ```
 neeraj/

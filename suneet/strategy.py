@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-SUNEET - Williams Fractal 7 strategy backtest (NIFTY index, 3-minute candles).
+SUNEET - Williams Fractal 7 strategy backtest (NIFTY index, 1-minute candles).
 
 Indicator  : TradingView built-in Williams fractal, Periods 7 (indicators/williams_fractal.py).
 CE (BUY)   : red arrow below a candle (down fractal, swing low).
 PE (SELL)  : green arrow above a candle (up fractal, swing high).
 Signal     : when the arrow appears live: the arrow on candle X is confirmed when candle X+7
-             closes (21 minutes later on 3m); TradingView then draws it back on candle X.
+             closes (7 minutes later on 1m); TradingView then draws it back on candle X.
 Entry      : open of the candle after the confirming candle (X+8).
 Stop loss  : the arrow candle's (X) low (CE) / high (PE), wick, checked on every candle.
 Exit       : the next opposite arrow exits and reverses at the next open; one position at a
              time. A same-side arrow while in a trade is ignored. After a stop, the next arrow
              of either side opens a new trade.
 Session    : entries on candles opening before 15:00; everything squared off at 15:15 (close
-             of the 15:12 candle). Arrows are not carried to the next day.
+             of the 15:14 candle). Arrows are not carried to the next day.
 Options    : P&L in NIFTY index points (Yahoo has no option prices). Each trade lists the
              option it stands for: ATM = entry price rounded to 50; CE strike = ATM - 50
              (50 points ITM), PE strike = ATM + 100 (100 points ITM); nearest weekly expiry
@@ -22,10 +22,10 @@ Options    : P&L in NIFTY index points (Yahoo has no option prices). Each trade 
 Output     : results/trades.csv, results/summary.txt, results/bars_with_indicators.csv.
 
 Usage (from the repository root):
-    python suneet/strategy.py                      # ^NSEI 3m from yfinance, last 20 sessions
+    python suneet/strategy.py                      # ^NSEI 1m from yfinance, last 20 sessions
     python suneet/strategy.py --sessions 5
     python suneet/strategy.py --day 2026-11-18
-    python suneet/strategy.py --csv nifty_3m.csv   # Datetime,Open,High,Low,Close (IST)
+    python suneet/strategy.py --csv nifty_1m.csv   # Datetime,Open,High,Low,Close (IST)
 """
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ from data import fetch_1m, load_csv, clean, to_timeframe  # noqa: E402
 from indicators.williams_fractal import williams_fractal, PERIODS  # noqa: E402
 
 SYMBOL = "^NSEI"
-TIMEFRAME_MIN = 3
+TIMEFRAME_MIN = 1
 ENTRY_CUTOFF = time(15, 0)       # an entry candle must open before 15:00
 SQUARE_OFF = time(15, 15)        # close of the candle ending 15:15
 QTY = 65                         # NIFTY lot size
@@ -218,7 +218,7 @@ def main():
     trades = run(df, window[0])
     tl, lines = report(trades, a.qty, a.cost_pct)
 
-    src = a.csv if a.csv else f"{SYMBOL} (yfinance 1m -> 3m)"
+    src = a.csv if a.csv else f"{SYMBOL} (yfinance 1m)"
     title = (f"SUNEET Williams Fractal {PERIODS} | {src} | {TIMEFRAME_MIN}m | "
              f"{window[0]} -> {window[-1]} ({len(window)} sessions)")
     header = (f"{title}\nCE on red arrow / PE on green arrow when the arrow appears ({PERIODS} candles after "

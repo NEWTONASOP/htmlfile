@@ -64,7 +64,7 @@ client reads their chart, then answer questions about the trades.
 | Gold | `GC=F` COMEX futures (**no spot XAUUSD on Yahoo**); silver `SI=F` |
 | 3-minute | not on Yahoo → build from 1m (bins from 09:15) |
 | Options | **not on Yahoo**. NSE F&O bhavcopy = daily close only (`nsearchives.nseindia.com`). Intraday option data needs a broker API (Breeze keeps expired contracts) |
-| TradingView candles / closed-source script outputs | TradingView-API with the user's cookies in `TV_SESSION` / `TV_SIGNATURE` (see `alia/tv_download`). Password login is blocked from servers; send a browser user agent. Free plan: NSE delayed, ~5,000 candles. TradingView NSE 3m (`NSE:NIFTY`, `NSE:RELIANCE`) has **no candles after 15:15** (Yahoo has 15:15–15:29: drop them) |
+| TradingView candles / closed-source script outputs | TradingView-API with the user's cookies in `TV_SESSION` / `TV_SIGNATURE` (see `alia/tv_download`). Password login is blocked from servers; send a browser user agent. Free plan: NSE delayed, ~5,000 candles. TradingView NSE data (`NSE:NIFTY`, `NSE:RELIANCE`; 3m last candle 15:12, 1m last 15:14) has **no candles after 15:15** (Yahoo has 15:15–15:29: drop them) |
 
 - NSE session 09:15–15:30 IST (nothing executes after 15:30). RELIANCE tick ₹0.10;
   NIFTY strikes step 50, lot 65, weekly expiry Tuesday (holiday → previous trading day).
@@ -132,9 +132,9 @@ client reads their chart, then answer questions about the trades.
   display only. **Backtest (confirmed):** the script's entries + stop = closer of 10 pts / 1%;
   at +20 pts no booking: stop to breakeven, then trail 1% behind the best price; no session,
   held overnight like the script. Indian markets only (no BTC).
-- **suneet/** Williams Fractal 7 (TradingView built-in, source in `indicators/`), NIFTY 3m.
+- **suneet/** Williams Fractal 7 (TradingView built-in, source in `indicators/`), NIFTY **1m**.
   Red arrow → CE, green → PE; signal = **when the arrow appears (arrow candle + 7, live)**, entry
   next open; SL = arrow candle wick; opposite arrow → exit + reverse; same-side arrow ignored; after
   SL any arrow re-enters; entries before 15:00, square-off 15:15. P&L in index points; each trade
   lists CE ATM−50 / PE ATM+100, nearest Tuesday expiry (next week on expiry day). Port = TV
-  output 444/444 arrows.
+  output 444/444 arrows on 3m, 424/424 on 1m.

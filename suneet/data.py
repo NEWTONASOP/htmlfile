@@ -1,15 +1,14 @@
-"""Market data for this strategy: 3-minute NSE candles in IST.
+"""Market data for this strategy: 1-minute NSE candles in IST.
 
 Two sources:
-  * yfinance (default): 1-minute candles grouped into 3-minute candles starting at 09:15
-    (09:15, 09:18, ...), the same grid TradingView uses for NSE. yfinance has no 3-minute
-    interval and keeps 1-minute data for only about the last 30 days (7 days per request).
+  * yfinance (default): 1-minute candles, used as they are. yfinance keeps 1-minute data
+    for only about the last 30 days (7 days per request).
   * CSV (--csv): Datetime, Open, High, Low, Close (IST if no offset), e.g. candles exported
-    from TradingView. A 3-minute CSV is used as it is (the Muhurat session has its own time
-    grid on TradingView); 1-minute CSVs are grouped.
+    from TradingView. A CSV already at the strategy's timeframe is used as it is (the Muhurat
+    session has its own time grid on TradingView); finer candles are grouped.
 
-Session: TradingView's NSE:NIFTY 3-minute data has no candles after 15:15 (last candle
-15:12), while Yahoo goes on to 15:29. Extra Yahoo candles would change which candle is a
+Session: TradingView's NSE:NIFTY data has no candles after 15:15 (1-minute: last candle
+15:14, 360 a day), while Yahoo goes on to 15:29. Extra Yahoo candles would change which candle is a
 fractal, so candles from 15:15 on are dropped to match the chart.
 """
 from __future__ import annotations
@@ -20,7 +19,7 @@ import pandas as pd
 
 IST = "Asia/Kolkata"
 SESSION_START = time(9, 15)
-SESSION_END = time(15, 15)       # TradingView NSE:NIFTY: last 3-minute candle starts 15:12
+SESSION_END = time(15, 15)       # TradingView NSE:NIFTY: last 1-minute candle starts 15:14
 
 
 def fetch_1m(symbol: str, days: int = 30) -> pd.DataFrame:
