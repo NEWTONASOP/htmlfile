@@ -17,7 +17,10 @@ ATM NIFTY option (CE or PE). Yahoo has no option prices, so P&L is in **NIFTY in
 | `verify.py` | Independent check: indicators recomputed separately, setups rebuilt, every trade checked against the rules |
 | `results/<2m|5m>/` | `trades.csv`, `signals.csv` (every candle with all 3 conditions and what happened), `summary.txt`, `bars_with_indicators.csv`, `chart.html` |
 
-No Pine source is needed: SMA, EMA, Supertrend and RSI are TradingView built-ins.
+The official TradingView Pine sources of the four built-ins are saved next to the ports
+(`indicators/sma.pine`, `ema.pine`, `supertrend.pine`, `rsi.pine`, fetched from TradingView's
+`STD;SMA`, `STD;EMA`, `STD;Supertrend`, `STD;RSI`). The Python ports follow them; the SMA/EMA
+"Smoothing" option is off (default) and not used.
 
 ## Run
 

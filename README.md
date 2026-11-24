@@ -76,7 +76,7 @@ TradingView Pine source where one was provided.
   data.py
   chart.py
   verify.py
-  indicators/  moving_averages.py  supertrend.py  rsi.py
+  indicators/  moving_averages.py  supertrend.py  rsi.py  + sma/ema/supertrend/rsi .pine
 ```
 
 ## Run (from the repository root, or `cd <folder>` and `python strategy.py`)
