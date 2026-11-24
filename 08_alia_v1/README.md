@@ -95,7 +95,7 @@ opposite signal. On stocks 1% is close to 10–20 points, so the trail moves wit
 
 | Source | Use | Notes |
 |---|---|---|
-| TradingView export (`--csv alia/data/NSE_NIFTY_3.csv`) | **Matches the client's chart exactly** | About 2 months of 3-minute history (5,059 candles on a free plan). Needs the downloader below |
+| TradingView export (`--csv 08_alia_v1/data/NSE_NIFTY_3.csv`) | **Matches the client's chart exactly** | About 2 months of 3-minute history (5,059 candles on a free plan). Needs the downloader below |
 | yfinance `^NSEI` / `RELIANCE.NS` (default) | No login needed | 1-minute candles grouped into 3-minute (09:15, 09:18, …); only about the last 30 days (≈ 18–20 sessions) |
 
 - **Session end 15:15:** TradingView's NSE 3-minute data (NIFTY and stocks) stops at 15:15 (last
@@ -112,12 +112,12 @@ From the repository root:
 
 ```bash
 pip install -r requirements.txt
-python alia/strategy.py                                            # ^NSEI from yfinance, last 20 sessions
-python alia/strategy.py --csv alia/data/NSE_NIFTY_3.csv --sessions 60   # TradingView candles
-python alia/strategy.py --symbol RELIANCE.NS --qty 100              # a stock
-python alia/strategy.py --day 2026-11-17                           # print one day's trades
-python alia/verify.py alia/data/NSE_NIFTY_3.csv --yahoo      # rebuild vs TradingView
-python alia/verify.py alia/data/NSE_RELIANCE_3.csv --yahoo --symbol RELIANCE.NS
+python 08_alia_v1/strategy.py                                            # ^NSEI from yfinance, last 20 sessions
+python 08_alia_v1/strategy.py --csv 08_alia_v1/data/NSE_NIFTY_3.csv --sessions 60   # TradingView candles
+python 08_alia_v1/strategy.py --symbol RELIANCE.NS --qty 100              # a stock
+python 08_alia_v1/strategy.py --day 2026-11-17                           # print one day's trades
+python 08_alia_v1/verify.py 08_alia_v1/data/NSE_NIFTY_3.csv --yahoo      # rebuild vs TradingView
+python 08_alia_v1/verify.py 08_alia_v1/data/NSE_RELIANCE_3.csv --yahoo --symbol RELIANCE.NS
 ```
 
 ## Comparing with the TradingView chart
@@ -147,14 +147,14 @@ export TV_SIGNATURE='...sessionid_sign...'
 ```
 
 ```bash
-npm --prefix alia/tv_download install
+npm --prefix 08_alia_v1/tv_download install
 ```
 
 ```bash
-node alia/tv_download/download.mjs NSE:NIFTY 3 6000
+node 08_alia_v1/tv_download/download.mjs NSE:NIFTY 3 6000
 ```
 
-This writes `alia/data/NSE_NIFTY_3.csv` (candles + the script's Fast MA, Trend MA line,
+This writes `08_alia_v1/data/NSE_NIFTY_3.csv` (candles + the script's Fast MA, Trend MA line,
 BUY/SELL arrows) and `NSE_NIFTY_3_tv_trades.csv` (the script's Strategy-Tester trades). Notes:
 
 - The cookies give full access to that TradingView account. Log out of all sessions on

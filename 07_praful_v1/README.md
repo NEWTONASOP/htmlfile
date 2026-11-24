@@ -18,8 +18,8 @@ futures `GC=F` from Yahoo (no spot XAUUSD on Yahoo), about the last 60 days, New
 
 ```bash
 pip install -r requirements.txt
-python praful/strategy.py
-python praful/strategy.py --days 7    # last week only (earlier data warms up the indicator)
+python 07_praful_v1/strategy.py
+python 07_praful_v1/strategy.py --days 7    # last week only (earlier data warms up the indicator)
 ```
 
 ## Rules as implemented

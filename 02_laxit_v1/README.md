@@ -19,14 +19,14 @@ SMA 20 Low and MACD. Default: `RELIANCE.NS`, last 1 week (5 sessions), data from
 Run from the repository root:
 
 ```bash
-python laxit/strategy.py                  # RELIANCE.NS 2m, last 5 complete sessions
-python laxit/strategy.py --interval 5m    # same rules on 5-minute candles
-python laxit/strategy.py --sessions 40 --cost-pct 0.05
-python laxit/strategy.py --day 2026-11-13 # print one day's trades
-python laxit/strategy.py --one-at-a-time  # no CALL/PUT overlap
+python 02_laxit_v1/strategy.py                  # RELIANCE.NS 2m, last 5 complete sessions
+python 02_laxit_v1/strategy.py --interval 5m    # same rules on 5-minute candles
+python 02_laxit_v1/strategy.py --sessions 40 --cost-pct 0.05
+python 02_laxit_v1/strategy.py --day 2026-11-13 # print one day's trades
+python 02_laxit_v1/strategy.py --one-at-a-time  # no CALL/PUT overlap
 ```
 
-Outputs go to `laxit/results/`. MACD follows the TradingView built-in source: EMA 12 − EMA 26
+Outputs go to `02_laxit_v1/results/`. MACD follows the TradingView built-in source: EMA 12 − EMA 26
 of close, signal = EMA 9 of MACD (EMAs seeded like Pine's `ta.ema`). A crossover is the
 histogram crossing 0.
 

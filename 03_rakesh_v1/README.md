@@ -20,13 +20,13 @@ Run from the repository root:
 
 ```bash
 pip install -r requirements.txt
-python rakesh/strategy.py                          # RELIANCE.NS 5m, last 5 sessions, qty 50
-python rakesh/strategy.py --sessions 40 --cost-pct 0.05
-python rakesh/strategy.py --day 2026-11-13         # print one day's trades
-python rakesh/strategy.py --tick 0.05              # different tick size
+python 03_rakesh_v1/strategy.py                          # RELIANCE.NS 5m, last 5 sessions, qty 50
+python 03_rakesh_v1/strategy.py --sessions 40 --cost-pct 0.05
+python 03_rakesh_v1/strategy.py --day 2026-11-13         # print one day's trades
+python 03_rakesh_v1/strategy.py --tick 0.05              # different tick size
 ```
 
-Outputs go to `rakesh/results/`: `trades.csv`, `summary.txt` and `bars_with_indicators.csv`
+Outputs go to `03_rakesh_v1/results/`: `trades.csv`, `summary.txt` and `bars_with_indicators.csv`
 (every EMA and the crossover flags per candle, to compare with TradingView).
 
 ## EMAs

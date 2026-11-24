@@ -26,12 +26,14 @@ client reads their chart, then answer questions about the trades.
 
 ## 2. Building
 
-- **One folder per person, fully self-contained** (nothing shared between strategies, never
-  import from another folder):
+- **One folder per person and version, fully self-contained** (nothing shared between strategies,
+  never import from another folder). Name: `NN_<name>_vN/`, where NN is the person's order of
+  arrival (01 = first) and vN the version. A new version of the same person's strategy is a new
+  folder (`10_raj_v1/` → `10_raj_v2/`); a new person takes the next number.
   ```
-  <name>/
+  NN_<name>_vN/
     README.md        rules as implemented (table), data used, how to run
-    strategy.py      backtest + report (runs from repo root: python <name>/strategy.py)
+    strategy.py      backtest + report (runs from repo root: python NN_<name>_vN/strategy.py)
     data.py          its own data loader
     indicators/      one Python file per indicator + the original .pine source if given
     results/         output (gitignored)
@@ -64,7 +66,7 @@ client reads their chart, then answer questions about the trades.
 | Gold | `GC=F` COMEX futures (**no spot XAUUSD on Yahoo**); silver `SI=F` |
 | 3-minute | not on Yahoo → build from 1m (bins from 09:15) |
 | Options | **not on Yahoo**. NSE F&O bhavcopy = daily close only (`nsearchives.nseindia.com`). Intraday option data needs a broker API (Breeze keeps expired contracts) |
-| TradingView candles / closed-source script outputs | TradingView-API with the user's cookies in `TV_SESSION` / `TV_SIGNATURE` (see `alia/tv_download`). Password login is blocked from servers; send a browser user agent. Free plan: NSE delayed, ~5,000 candles. TradingView NSE data (`NSE:NIFTY`, `NSE:RELIANCE`; 3m last candle 15:12, 1m last 15:14) has **no candles after 15:15** (Yahoo has 15:15–15:29: drop them) |
+| TradingView candles / closed-source script outputs | TradingView-API with the user's cookies in `TV_SESSION` / `TV_SIGNATURE` (see `08_alia_v1/tv_download`). Password login is blocked from servers; send a browser user agent. Free plan: NSE delayed, ~5,000 candles. TradingView NSE data (`NSE:NIFTY`, `NSE:RELIANCE`; 3m last candle 15:12, 1m last 15:14) has **no candles after 15:15** (Yahoo has 15:15–15:29: drop them) |
 
 - NSE session 09:15–15:30 IST (nothing executes after 15:30). RELIANCE tick ₹0.10;
   NIFTY strikes step 50, lot 65, weekly expiry Tuesday (holiday → previous trading day).
@@ -104,27 +106,27 @@ client reads their chart, then answer questions about the trades.
 
 ## 8. Strategies so far (decisions already confirmed)
 
-- **neeraj/** Kyle Algo EMA ribbon + Liquidity Swings, 5m. Fresh close above/below the full
+- **01_neeraj_v1/** Kyle Algo EMA ribbon + Liquidity Swings, 5m. Fresh close above/below the full
   ribbon → CALL/PUT next open; every signal its own trade; exit at the RED/GREEN zone's
   swing candle (label position), 1% SL, 15:15 square-off. Open question: why the client
   expects some entries the data doesn't give (ribbon close margins, zone touches).
-- **laxit/** SMA20 High/Low + MACD, **2m**. Setup candle: green/red, >50% body beyond SMA,
+- **02_laxit_v1/** SMA20 High/Low + MACD, **2m**. Setup candle: green/red, >50% body beyond SMA,
   MACD cross on that candle; entry next candle break only; SL follows the SMA line; at 1:1
   book 50% and move SL to cost (no trailing); entries 09:45–14:20, square-off 15:15.
-- **rakesh/** 7 EMAs, 5m. BUY when the 60 EMA crosses **above** all others (SELL below);
+- **03_rakesh_v1/** 7 EMAs, 5m. BUY when the 60 EMA crosses **above** all others (SELL below);
   next open; SL 1 tick beyond the crossover candle; 50% at 1:1 → cost, rest at 1:2.
-- **toufik/** EMA4/SMA10, 3m (from 1m). Crossover → reverse; 1% SL; entries until 15:00.
-- **ashishkumarverma/** ORB on 15m only: opening candle high/low (wick), alert = first close
+- **04_toufik_v1/** EMA4/SMA10, 3m (from 1m). Crossover → reverse; 1% SL; entries until 15:00.
+- **05_ashishkumarverma_v1/** ORB on 15m only: opening candle high/low (wick), alert = first close
   beyond it, entry on break of the alert candle wick (at the level) until 13:30, SL alert
   candle capped 1%, exit on 15m close across 9 EMA, RVOL(20, same time slot, 20 days) ≥ 1.5
   on opening and alert candles, gap > 2% no trade, square-off 15:00.
-- **amitrajdev/** SMA120 + LuxAlgo pivots + Reversal Entry Zones + Smoothed HA, 5m. All 4
+- **06_amitrajdev_v1/** SMA120 + LuxAlgo pivots + Reversal Entry Zones + Smoothed HA, 5m. All 4
   newly align → entry next open; exit when 2+ conditions are against **at the same close**;
   LuxAlgo/RevZones read at **label position**; no SL; entries to 15:00, square-off 15:15.
-- **praful/** ICT Session Scalper Toolkit on gold (`GC=F`), 5m, New York time. A+/B signals,
+- **07_praful_v1/** ICT Session Scalper Toolkit on gold (`GC=F`), 5m, New York time. A+/B signals,
   every signal a trade, 0.01 lot, +$3 target, exit on a ✗ sweep in the trade's direction,
   indicator SL (sweep extreme ± 2 ticks, capped 3×ATR14), $0.30 spread, SMT vs silver.
-- **alia/** (client Alia) closed-source invite-only TradingView strategy "Od trading software no wm",
+- **08_alia_v1/** (client Alia) closed-source invite-only TradingView strategy "Od trading software no wm",
   decoded from its outputs. Its trades: ATR trailing stop on EMA 4 of close (1.7 × ATR 7);
   EMA crossing it → next open, reverse on the opposite signal, 10/20-point SL/TP from the next
   candle, held overnight (replay 616/620 TradingView trades on NIFTY, RELIANCE, SBIN, HDFCBANK;
@@ -132,7 +134,7 @@ client reads their chart, then answer questions about the trades.
   display only. **Backtest (confirmed):** the script's entries + stop = closer of 10 pts / 1%;
   at +20 pts no booking: stop to breakeven, then trail 1% behind the best price; no session,
   held overnight like the script. Indian markets only (no BTC).
-- **suneet/** Williams Fractal 7 (TradingView built-in, source in `indicators/`), NIFTY **1m**.
+- **09_suneet_v1/** Williams Fractal 7 (TradingView built-in, source in `indicators/`), NIFTY **1m**.
   Red arrow → CE, green → PE; signal = **when the arrow appears (arrow candle + 7, live)**, entry
   next open; SL = arrow candle wick; opposite arrow → exit + reverse; same-side arrow ignored; after
   SL any arrow re-enters; entries before 15:00, square-off 15:15. P&L in index points; each trade

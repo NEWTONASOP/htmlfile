@@ -17,9 +17,9 @@ Exit  : exit at the next open when, on a candle close, 2+ conditions are against
 Risk  : quantity 1, no stop loss, square-off 15:15. Signals are not carried overnight.
 
 Usage:
-    python amitrajdev/strategy.py                    # RELIANCE.NS 5m, last 5 sessions
-    python amitrajdev/strategy.py --sessions 20
-    python amitrajdev/strategy.py --day 2026-11-17
+    python 06_amitrajdev_v1/strategy.py                    # RELIANCE.NS 5m, last 5 sessions
+    python 06_amitrajdev_v1/strategy.py --sessions 20
+    python 06_amitrajdev_v1/strategy.py --day 2026-11-17
 """
 from __future__ import annotations
 

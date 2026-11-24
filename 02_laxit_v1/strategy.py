@@ -4,7 +4,7 @@ LAXIT - intraday strategy backtest (2-minute candles by default, NSE).
 
 Indicators : SMA 20 of High, SMA 20 of Low, MACD (TradingView built-in: EMA 12 - EMA 26
              of close, signal = EMA 9 of MACD, crossover = histogram crossing 0).
-             See laxit/indicators/ (Python ports + original Pine source).
+             See 02_laxit_v1/indicators/ (Python ports + original Pine source).
 CALL setup : green candle, more than 50% of its body above SMA20 High, and a bullish
              MACD crossover on this same candle.
 PUT setup  : red candle, more than 50% of its body below SMA20 Low, and a bearish MACD
@@ -18,11 +18,11 @@ Management : 1:1 is measured from the SL at entry. At 1:1 book 50% and move the 
              (cost-to-cost); no further trailing. Forced exit 15:15.
 
 Usage:
-    python laxit/strategy.py                        # RELIANCE.NS 2m, last 5 complete sessions
-    python laxit/strategy.py --interval 5m          # same rules on 5-minute candles
-    python laxit/strategy.py --sessions 40 --cost-pct 0.05
-    python laxit/strategy.py --one-at-a-time        # no CALL/PUT overlap
-    python laxit/strategy.py --day 2026-11-13       # print only that day's trades
+    python 02_laxit_v1/strategy.py                        # RELIANCE.NS 2m, last 5 complete sessions
+    python 02_laxit_v1/strategy.py --interval 5m          # same rules on 5-minute candles
+    python 02_laxit_v1/strategy.py --sessions 40 --cost-pct 0.05
+    python 02_laxit_v1/strategy.py --one-at-a-time        # no CALL/PUT overlap
+    python 02_laxit_v1/strategy.py --day 2026-11-13       # print only that day's trades
 """
 from __future__ import annotations
 

@@ -21,9 +21,9 @@ Exit     : CE when a 15-minute candle closes below the 9 EMA, PE when one closes
            No fixed target (--rr adds one if wanted).
 
 Usage:
-    python ashishkumarverma/strategy.py                   # RELIANCE.NS, last 5 sessions
-    python ashishkumarverma/strategy.py --sessions 40     # about two months
-    python ashishkumarverma/strategy.py --rr 2            # optional fixed 1:2 target
+    python 05_ashishkumarverma_v1/strategy.py                   # RELIANCE.NS, last 5 sessions
+    python 05_ashishkumarverma_v1/strategy.py --sessions 40     # about two months
+    python 05_ashishkumarverma_v1/strategy.py --rr 2            # optional fixed 1:2 target
 """
 from __future__ import annotations
 

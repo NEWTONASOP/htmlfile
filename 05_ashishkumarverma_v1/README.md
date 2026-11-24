@@ -21,10 +21,10 @@ Run from the repository root:
 
 ```bash
 pip install -r requirements.txt
-python ashishkumarverma/strategy.py                   # RELIANCE.NS, last 5 sessions
-python ashishkumarverma/strategy.py --sessions 40     # about two months
-python ashishkumarverma/strategy.py --rr 2            # optional fixed 1:2 target (default: none)
-python ashishkumarverma/strategy.py --min-rvol 1.5 --max-gap-pct 2 --max-sl-pct 1 --last-entry 13:30
+python 05_ashishkumarverma_v1/strategy.py                   # RELIANCE.NS, last 5 sessions
+python 05_ashishkumarverma_v1/strategy.py --sessions 40     # about two months
+python 05_ashishkumarverma_v1/strategy.py --rr 2            # optional fixed 1:2 target (default: none)
+python 05_ashishkumarverma_v1/strategy.py --min-rvol 1.5 --max-gap-pct 2 --max-sl-pct 1 --last-entry 13:30
 ```
 
 RVOL needs volume, so use a **stock**. Index symbols such as `^NSEI` have no volume on Yahoo.

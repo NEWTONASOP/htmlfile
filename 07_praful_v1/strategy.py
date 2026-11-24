@@ -17,8 +17,8 @@ Data    : COMEX gold futures GC=F (Yahoo has no spot XAUUSD), SMT vs silver SI=F
           about the last 60 days of 5-minute candles.
 
 Usage:
-    python praful/strategy.py
-    python praful/strategy.py --days 7       # last week only
+    python 07_praful_v1/strategy.py
+    python 07_praful_v1/strategy.py --days 7       # last week only
 """
 from __future__ import annotations
 

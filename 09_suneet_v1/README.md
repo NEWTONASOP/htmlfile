@@ -20,11 +20,11 @@ From the repository root:
 
 ```bash
 pip install -r requirements.txt
-python suneet/strategy.py                       # ^NSEI 1m, last 20 sessions (yfinance max ~20)
-python suneet/strategy.py --sessions 5
-python suneet/strategy.py --day 2026-11-18      # print one day's trades
-python suneet/strategy.py --qty 65 --cost-pct 0.05
-python suneet/strategy.py --csv nifty_1m.csv    # Datetime,Open,High,Low,Close (IST)
+python 09_suneet_v1/strategy.py                       # ^NSEI 1m, last 20 sessions (yfinance max ~20)
+python 09_suneet_v1/strategy.py --sessions 5
+python 09_suneet_v1/strategy.py --day 2026-11-18      # print one day's trades
+python 09_suneet_v1/strategy.py --qty 65 --cost-pct 0.05
+python 09_suneet_v1/strategy.py --csv nifty_1m.csv    # Datetime,Open,High,Low,Close (IST)
 ```
 
 ## Rules as implemented

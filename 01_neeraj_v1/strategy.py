@@ -2,7 +2,7 @@
 """
 Neeraj - Kyle Algo + Liquidity Swings strategy backtest (5-minute, NSE intraday).
 
-Indicators live in neeraj/indicators/ (Python ports + original Pine sources).
+Indicators live in 01_neeraj_v1/indicators/ (Python ports + original Pine sources).
 
 Entries : Kyle Algo EMA ribbon (15 EMAs of HIGH, lengths 9..51 step 3).
           Fresh close above the whole ribbon -> CALL (long) next candle open.
@@ -17,9 +17,9 @@ Stop    : fixed 1% from entry price (intrabar, on candle high/low).
 Session : square off at 15:15 IST; no new entry on the candle ending 15:15.
 
 Usage:
-    python neeraj/strategy.py                       # RELIANCE.NS via yfinance, last 5 sessions
-    python neeraj/strategy.py --sessions 5 --symbol RELIANCE.NS
-    python neeraj/strategy.py --csv data.csv        # use your own 5m OHLC (Datetime,Open,High,Low,Close)
+    python 01_neeraj_v1/strategy.py                       # RELIANCE.NS via yfinance, last 5 sessions
+    python 01_neeraj_v1/strategy.py --sessions 5 --symbol RELIANCE.NS
+    python 01_neeraj_v1/strategy.py --csv data.csv        # use your own 5m OHLC (Datetime,Open,High,Low,Close)
 """
 from __future__ import annotations
 

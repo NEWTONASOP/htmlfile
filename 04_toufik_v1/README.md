@@ -22,14 +22,14 @@ Run from the repository root (needs `yfinance`, `pandas`, `plotly`):
 
 ```bash
 pip install -r requirements.txt
-python toufik/strategy.py                              # RELIANCE.NS 3m, last 5 sessions
-python toufik/strategy.py --sl-pct 0.5                 # stop loss %
-python toufik/strategy.py --ma-type ema                # MA 10 as EMA instead of SMA
-python toufik/strategy.py --qty 500 --brokerage 20 --cost-pct 0.05
-python toufik/strategy.py --day 2026-11-17             # print one day's trades
+python 04_toufik_v1/strategy.py                              # RELIANCE.NS 3m, last 5 sessions
+python 04_toufik_v1/strategy.py --sl-pct 0.5                 # stop loss %
+python 04_toufik_v1/strategy.py --ma-type ema                # MA 10 as EMA instead of SMA
+python 04_toufik_v1/strategy.py --qty 500 --brokerage 20 --cost-pct 0.05
+python 04_toufik_v1/strategy.py --day 2026-11-17             # print one day's trades
 ```
 
-Open `toufik/results/chart.html` in a browser to see the chart.
+Open `04_toufik_v1/results/chart.html` in a browser to see the chart.
 
 ## 3-minute data
 

@@ -22,10 +22,10 @@ Options    : P&L in NIFTY index points (Yahoo has no option prices). Each trade 
 Output     : results/trades.csv, results/summary.txt, results/bars_with_indicators.csv.
 
 Usage (from the repository root):
-    python suneet/strategy.py                      # ^NSEI 1m from yfinance, last 20 sessions
-    python suneet/strategy.py --sessions 5
-    python suneet/strategy.py --day 2026-11-18
-    python suneet/strategy.py --csv nifty_1m.csv   # Datetime,Open,High,Low,Close (IST)
+    python 09_suneet_v1/strategy.py                      # ^NSEI 1m from yfinance, last 20 sessions
+    python 09_suneet_v1/strategy.py --sessions 5
+    python 09_suneet_v1/strategy.py --day 2026-11-18
+    python 09_suneet_v1/strategy.py --csv nifty_1m.csv   # Datetime,Open,High,Low,Close (IST)
 """
 from __future__ import annotations
 

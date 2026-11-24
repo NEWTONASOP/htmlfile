@@ -14,10 +14,10 @@ Costs      : --cost-pct (round trip, % of entry value) and --brokerage (Rs per o
 Output     : trades.csv, summary.txt and chart.html (candles, EMA 4, MA 10, all entries/exits).
 
 Usage:
-    python toufik/strategy.py                        # RELIANCE.NS 3m, last 5 sessions
-    python toufik/strategy.py --sl-pct 0.5 --ma-type ema
-    python toufik/strategy.py --qty 500 --brokerage 20 --cost-pct 0.05
-    python toufik/strategy.py --day 2026-11-17
+    python 04_toufik_v1/strategy.py                        # RELIANCE.NS 3m, last 5 sessions
+    python 04_toufik_v1/strategy.py --sl-pct 0.5 --ma-type ema
+    python 04_toufik_v1/strategy.py --qty 500 --brokerage 20 --cost-pct 0.05
+    python 04_toufik_v1/strategy.py --day 2026-11-17
 """
 from __future__ import annotations
 

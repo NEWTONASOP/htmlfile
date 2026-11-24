@@ -22,14 +22,14 @@ Run from the repository root:
 
 ```bash
 pip install -r requirements.txt
-python neeraj/strategy.py                          # RELIANCE.NS, last 5 complete sessions
-python neeraj/strategy.py --qty 100 --cost-pct 0.05
-python neeraj/strategy.py --exit-at confirm        # exits you could take live
-python neeraj/strategy.py --zones 2026-11-13       # list the zones drawn on a day
-python neeraj/strategy.py --csv my_5m_data.csv     # columns: Datetime,Open,High,Low,Close (IST)
+python 01_neeraj_v1/strategy.py                          # RELIANCE.NS, last 5 complete sessions
+python 01_neeraj_v1/strategy.py --qty 100 --cost-pct 0.05
+python 01_neeraj_v1/strategy.py --exit-at confirm        # exits you could take live
+python 01_neeraj_v1/strategy.py --zones 2026-11-13       # list the zones drawn on a day
+python 01_neeraj_v1/strategy.py --csv my_5m_data.csv     # columns: Datetime,Open,High,Low,Close (IST)
 ```
 
-Outputs go to `neeraj/results/`: `trades.csv` (trade log), `summary.txt` (stats),
+Outputs go to `01_neeraj_v1/results/`: `trades.csv` (trade log), `summary.txt` (stats),
 `bars_with_indicators.csv` (ribbon, signals and zones per candle, for checking against TradingView).
 
 yfinance gives at most 60 days of 5m history. All of it is downloaded and used as indicator
@@ -66,7 +66,7 @@ warm-up, so the EMAs and pivots are settled before the backtest week starts.
   revisits before the next swing are never drawn and are ignored for exits. A drawn
   zone can therefore appear more than 14 candles after its swing candle.
 * List the zones drawn on a day, to compare with TradingView:
-  `python neeraj/strategy.py --zones 2026-11-13`
+  `python 01_neeraj_v1/strategy.py --zones 2026-11-13`
 * Pivot ties: the pivot candle must be strictly higher (or lower) than the 14 candles to its
   left and at least equal to the 14 to its right.
 * "Fully above or below the ribbon" uses a strict comparison of close against the highest or

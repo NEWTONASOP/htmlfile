@@ -2,7 +2,7 @@
 """
 Rakesh Rattan - EMA Crossover strategy backtest (5-minute candles, NSE intraday).
 
-EMAs     : 15, 30, 35, 40, 45, 50 and 60 (main) on close. See rakesh/indicators/ema_set.py.
+EMAs     : 15, 30, 35, 40, 45, 50 and 60 (main) on close. See 03_rakesh_v1/indicators/ema_set.py.
 BUY      : the 60 EMA crosses ABOVE all other EMAs (becomes the highest line).
 SELL     : the 60 EMA crosses BELOW all other EMAs (becomes the lowest line).
 Entry    : open of the candle after the crossover candle. Entries 09:15 - 15:00.
@@ -13,9 +13,9 @@ Other    : one trade at a time; opposite crossovers ignored while in a trade;
            anything open is squared off at 15:15.
 
 Usage:
-    python rakesh/strategy.py                       # RELIANCE.NS 5m, last 5 sessions, qty 50
-    python rakesh/strategy.py --sessions 40 --cost-pct 0.05
-    python rakesh/strategy.py --day 2026-11-13      # print only that day's trades
+    python 03_rakesh_v1/strategy.py                       # RELIANCE.NS 5m, last 5 sessions, qty 50
+    python 03_rakesh_v1/strategy.py --sessions 40 --cost-pct 0.05
+    python 03_rakesh_v1/strategy.py --day 2026-11-13      # print only that day's trades
 """
 from __future__ import annotations
 

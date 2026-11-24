@@ -23,9 +23,9 @@ Run from the repository root:
 
 ```bash
 pip install -r requirements.txt
-python amitrajdev/strategy.py                      # RELIANCE.NS, last 5 sessions
-python amitrajdev/strategy.py --sessions 40        # about 2 months
-python amitrajdev/strategy.py --day 2026-11-17     # print one day's trades
+python 06_amitrajdev_v1/strategy.py                      # RELIANCE.NS, last 5 sessions
+python 06_amitrajdev_v1/strategy.py --sessions 40        # about 2 months
+python 06_amitrajdev_v1/strategy.py --day 2026-11-17     # print one day's trades
 ```
 
 ## The 4 conditions (checked on every completed 5-minute candle)

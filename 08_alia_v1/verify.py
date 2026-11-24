@@ -11,9 +11,9 @@ With --yahoo, also rebuilds the arrows from yfinance 1-minute data (^NSEI -> 3m)
 how many TradingView arrows the Yahoo prices reproduce on the dates both cover.
 
 Usage (from the repository root):
-    python alia/verify.py alia/data/NSE_NIFTY_3.csv
-    python alia/verify.py alia/data/NSE_NIFTY_3.csv --yahoo
-    python alia/verify.py alia/data/NSE_RELIANCE_3.csv --yahoo --symbol RELIANCE.NS
+    python 08_alia_v1/verify.py 08_alia_v1/data/NSE_NIFTY_3.csv
+    python 08_alia_v1/verify.py 08_alia_v1/data/NSE_NIFTY_3.csv --yahoo
+    python 08_alia_v1/verify.py 08_alia_v1/data/NSE_RELIANCE_3.csv --yahoo --symbol RELIANCE.NS
 """
 from __future__ import annotations
 
