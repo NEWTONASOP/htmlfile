@@ -34,6 +34,7 @@ python 10_raj_v1/strategy.py --ma1 ema:9 --ma2 sma:21     # any MA type/period c
 python 10_raj_v1/strategy.py --st-atr 10 --st-factor 3 --rsi-len 21 --lot-size 65 --lots 2
 python 10_raj_v1/strategy.py --zero-dte                   # trade the expiring contract on expiry day
 python 10_raj_v1/strategy.py --day 2026-11-18             # print one day's trades
+python 10_raj_v1/strategy.py --symbol RELIANCE.NS --sessions 5   # test the backtest on another Yahoo symbol
 python 10_raj_v1/verify.py                                # independent check of the last run
 ```
 

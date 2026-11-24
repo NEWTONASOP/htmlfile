@@ -257,7 +257,7 @@ def parse_ma(s: str):
 
 
 def run_timeframe(minutes: int, a) -> None:
-    raw = load_csv(a.csv) if a.csv else fetch_yf(SYMBOL, minutes)
+    raw = load_csv(a.csv) if a.csv else fetch_yf(a.symbol, minutes)
     df = to_timeframe(clean(raw), minutes)
     bar = pd.Timedelta(minutes=minutes)
     sessions = sorted(set(df.index.date))
@@ -275,7 +275,7 @@ def run_timeframe(minutes: int, a) -> None:
 
     out = os.path.join(a.out, f"{minutes}m")
     os.makedirs(out, exist_ok=True)
-    src = a.csv if a.csv else f"{SYMBOL} (yfinance)"
+    src = a.csv if a.csv else f"{a.symbol} (yfinance)"
     title = (f"RAJ v1 | {src} {minutes}m | {a.ma1[0].upper()} {a.ma1[1]} x {a.ma2[0].upper()} {a.ma2[1]}, "
              f"Supertrend {a.st_atr}/{a.st_factor:g}, RSI {a.rsi_len} | {window[0]} -> {window[-1]} "
              f"({len(window)} sessions)")
@@ -313,6 +313,7 @@ def main():
     ap.add_argument("--lot-size", type=int, default=LOT_SIZE)
     ap.add_argument("--lots", type=int, default=1)
     ap.add_argument("--zero-dte", action="store_true", help="trade the expiring contract on expiry day")
+    ap.add_argument("--symbol", default=SYMBOL, help="Yahoo symbol (default ^NSEI; others only to test the backtest)")
     ap.add_argument("--csv", help="NIFTY candles from CSV instead of yfinance")
     ap.add_argument("--sessions", type=int, help="last N sessions only (default: all data)")
     ap.add_argument("--include-today", action="store_true")
