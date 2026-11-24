@@ -140,3 +140,9 @@ client reads their chart, then answer questions about the trades.
   SL any arrow re-enters; entries before 15:00, square-off 15:15. P&L in index points; each trade
   lists CE ATM−50 / PE ATM+100, nearest Tuesday expiry (next week on expiry day). Port = TV
   output 444/444 arrows on 3m, 424/424 on 1m.
+- **10_raj_v1/** NIFTY 2m / 5m, MA 1 × MA 2 (SMA/EMA, any periods; default SMA 9 × EMA 15; shorter
+  period = fast) crossover + Supertrend 10/3 + RSI 21 (>60 CE / <45 PE), all on the crossover
+  candle; entry at **that candle's close** (close ≥ 09:30); skip if range > 15; SL candle low/high
+  ∓ 0.25; 50% at 1:3 → SL to cost, then every 20 pts beyond the 1:3 price = SL +10; one trade at a
+  time; max 4 trades/day, stop after 3 wins or 3 losses in a row; square-off 15:15; ATM option,
+  nearest Tuesday expiry (0-DTE toggle OFF → next week on expiry day). Dashboard settings in README.
