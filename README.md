@@ -19,6 +19,7 @@ TradingView Pine source where one was provided.
 | ALIA – OD SOFTWARE (closed-source TradingView strategy, rebuilt) | [`08_alia_v1/`](08_alia_v1/README.md) | 3m | Script's trade signal decoded (EMA 4 × ATR trail 1.7 × ATR 7), stop = closer of 10 pts / 1%, trailing after +20 pts |
 | SUNEET – Williams Fractal 7 (NIFTY) | [`09_suneet_v1/`](09_suneet_v1/README.md) | 1m | Williams fractal (Periods 7), CE on red / PE on green arrow, SL arrow wick, reverse on opposite arrow |
 | RAJ v1 – MA crossover + Supertrend + RSI (NIFTY ATM options) | [`10_raj_v1/`](10_raj_v1/README.md) | 2m / 5m | SMA 9 × EMA 15 (configurable), Supertrend 10/3, RSI 21 (>60 / <45), 50% at 1:3, trailing SL |
+| RAVI v1 – NIFTY ORB (hourly range breakout, ATM options) | [`11_ravi_v1/`](11_ravi_v1/README.md) | 5m | Ranges 09:20/10:00/…/15:00, option VWAP + 9 EMA + ADX, NIFTY 9 EMA, ₹20 SL, 10/10 trailing, 7 EMA exit (Angel One data) |
 
 ```
 01_neeraj_v1/
@@ -77,6 +78,13 @@ TradingView Pine source where one was provided.
   chart.py
   verify.py
   indicators/  moving_averages.py  supertrend.py  rsi.py  + sma/ema/supertrend/rsi .pine
+11_ravi_v1/
+  README.md
+  strategy.py
+  data.py      (Angel One, credentials from env)
+  chart.py
+  verify.py
+  indicators/  ema.py  vwap.py  adx.py  + ema/vwap/adx .pine
 ```
 
 ## Run (from the repository root, or `cd <folder>` and `python strategy.py`)
@@ -93,6 +101,7 @@ python 07_praful_v1/strategy.py
 python 08_alia_v1/strategy.py
 python 09_suneet_v1/strategy.py
 python 10_raj_v1/strategy.py
+python 11_ravi_v1/strategy.py --download   # needs ANGEL_* environment variables
 ```
 
 Both default to `RELIANCE.NS` and the last 5 complete sessions. yfinance keeps about

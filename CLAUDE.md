@@ -146,3 +146,10 @@ client reads their chart, then answer questions about the trades.
   ∓ 0.25; 50% at 1:3 → SL to cost, then every 20 pts beyond the 1:3 price = SL +10; one trade at a
   time; max 4 trades/day, stop after 3 wins or 3 losses in a row; square-off 15:15; ATM option,
   nearest Tuesday expiry (0-DTE toggle OFF → next week on expiry day). Dashboard settings in README.
+- **11_ravi_v1/** NIFTY ORB, 5m, Angel One data (option VWAP needs volume; expired contracts not
+  served → only days whose expiry is live). Ranges = 09:20/10:00/…/15:00 candles; NIFTY close
+  beyond → ATM (nearest 50) CE/PE; while still beyond: morning option > VWAP + NIFTY vs 9 EMA +
+  option > 9 EMA + option ADX ≥ 20; from 13:00 no VWAP, option > 9 EMA (or 20). Entry next open
+  until 15:15; SL ₹20, trail ₹10 per ₹10 at once, target ₹40 OFF, exit on option close < 7 EMA
+  (next open), square-off 15:20; one at a time, 2 per range, same side needs a fresh break;
+  daily locks OFF; expiry day → next week.
