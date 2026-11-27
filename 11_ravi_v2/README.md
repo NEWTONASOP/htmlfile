@@ -4,7 +4,9 @@ ATM NIFTY option buying on 5-minute candles. Ranges and breakouts on the NIFTY 5
 VWAP / EMA 20 / ADX filters on the **ATM option's own 5-minute chart**. Data: **Angel One
 SmartAPI** (option volume is needed for VWAP; Yahoo has no option data).
 
-Changes from v1 (`11_ravi_v1/`), all from the client's "Final Rule Card": EMA 20 instead of 9,
+**Version history.** v1 (commit `6848c24`, earlier WhatsApp spec: EMA 9, NIFTY EMA check,
+2 trades per range with a fresh break, ₹40 target OFF, ₹10/₹10 trailing). v2 = client's "Final
+Rule Card": EMA 20 instead of 9,
 no NIFTY EMA check, last window = 14:55 + 15:00 candles, max 1 CE + 1 PE per window with
 reversal on an opposite signal, target ₹50 ON, trailing from +₹20 at high − ₹10, nearest weekly
 expiry (also on expiry day), daily limits 6 trades / ₹10,000 loss. Added by the client after the

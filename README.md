@@ -1,7 +1,8 @@
 # Intraday strategy backtests (NSE, yfinance)
 
 One folder per person's strategy, named `NN_<name>_vN/`: NN = order the person came in
-(01 first), vN = version of their strategy (a new version is a new folder). Each folder is **self-contained**: nothing is shared
+(01 first), vN = current version (a new version updates the same folder; older versions are in
+git history). Each folder is **self-contained**: nothing is shared
 between strategies, so a folder can be copied and run on its own. Every folder has its own
 `README.md`, the backtest (`strategy.py`), its own data loader (`data.py`) and an
 `indicators/` folder with each indicator as a separate Python file, next to the original
@@ -19,8 +20,7 @@ TradingView Pine source where one was provided.
 | ALIA – OD SOFTWARE (closed-source TradingView strategy, rebuilt) | [`08_alia_v1/`](08_alia_v1/README.md) | 3m | Script's trade signal decoded (EMA 4 × ATR trail 1.7 × ATR 7), stop = closer of 10 pts / 1%, trailing after +20 pts |
 | SUNEET – Williams Fractal 7 (NIFTY) | [`09_suneet_v1/`](09_suneet_v1/README.md) | 1m | Williams fractal (Periods 7), CE on red / PE on green arrow, SL arrow wick, reverse on opposite arrow |
 | RAJ v1 – MA crossover + Supertrend + RSI (NIFTY ATM options) | [`10_raj_v1/`](10_raj_v1/README.md) | 2m / 5m | SMA 9 × EMA 15 (configurable), Supertrend 10/3, RSI 21 (>60 / <45), 50% at 1:3, trailing SL |
-| RAVI v1 – NIFTY ORB (hourly range breakout, ATM options) | [`11_ravi_v1/`](11_ravi_v1/README.md) | 5m | Ranges 09:20/10:00/…/15:00, option VWAP + 9 EMA + ADX, NIFTY 9 EMA, ₹20 SL, 10/10 trailing, 7 EMA exit (Angel One data) |
-| RAVI v2 – NIFTY multi-window range breakout (Final Rule Card) | [`11_ravi_v2/`](11_ravi_v2/README.md) | 5m | Windows 09:20…14:55+15:00, option VWAP (to 12:00) + EMA 20 + ADX ≥ 20, 1 CE + 1 PE per window with reversal, SL 20 / target 50 / trail after +20 (Angel One data) |
+| RAVI v2 – NIFTY multi-window range breakout | [`11_ravi_v2/`](11_ravi_v2/README.md) | 5m | Windows 09:20…14:55+15:00, option VWAP (to 12:00) + EMA 20 + ADX ≥ 20, 1 CE + 1 PE per window with reversal, SL 20 / target 50 / trail after +20 (Angel One data) |
 
 ```
 01_neeraj_v1/
@@ -78,12 +78,6 @@ TradingView Pine source where one was provided.
   data.py
   verify.py
   indicators/  moving_averages.py  supertrend.py  rsi.py  + sma/ema/supertrend/rsi .pine
-11_ravi_v1/
-  README.md
-  strategy.py
-  data.py      (Angel One, credentials from env)
-  verify.py
-  indicators/  ema.py  vwap.py  adx.py  + ema/vwap/adx .pine
 11_ravi_v2/
   README.md
   strategy.py
@@ -106,7 +100,6 @@ python 07_praful_v1/strategy.py
 python 08_alia_v1/strategy.py
 python 09_suneet_v1/strategy.py
 python 10_raj_v1/strategy.py
-python 11_ravi_v1/strategy.py --download   # needs ANGEL_* environment variables
 python 11_ravi_v2/strategy.py --download   # needs ANGEL_* environment variables
 ```
 
@@ -132,6 +125,6 @@ python 10_raj_v1/strategy.py
 
 ## Adding a new person's strategy
 
-Create `NN_<name>_vN/` (next number for a new person, next version for a changed strategy) with `README.md`, `strategy.py`, `data.py` and `indicators/<indicator>.py`
+Create `NN_<name>_v1/` for a new person (next number); for a changed strategy update the same folder and rename it to the next version, with `README.md`, `strategy.py`, `data.py` and `indicators/<indicator>.py`
 (plus the `.pine` source if available). Keep everything inside that folder; do not import
 from another strategy.

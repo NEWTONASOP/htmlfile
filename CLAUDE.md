@@ -26,10 +26,12 @@ client reads their chart, then answer questions about the trades.
 
 ## 2. Building
 
-- **One folder per person and version, fully self-contained** (nothing shared between strategies,
-  never import from another folder). Name: `NN_<name>_vN/`, where NN is the person's order of
-  arrival (01 = first) and vN the version. A new version of the same person's strategy is a new
-  folder (`10_raj_v1/` → `10_raj_v2/`); a new person takes the next number.
+- **One folder per person, fully self-contained** (nothing shared between strategies, never
+  import from another folder). Name: `NN_<name>_vN/`, where NN is the person's order of arrival
+  (01 = first) and vN the current version. A new version **updates the same folder** (rename
+  `_v1` → `_v2` with `git mv`, change the code in place); the old version stays in git history
+  only, never as a second folder. Note the version history (what changed, old commit) in its
+  README. A new person takes the next number.
   ```
   NN_<name>_vN/
     README.md        rules as implemented (table), data used, how to run
@@ -148,14 +150,8 @@ client reads their chart, then answer questions about the trades.
   ∓ 0.25; 50% at 1:3 → SL to cost, then every 20 pts beyond the 1:3 price = SL +10; one trade at a
   time; max 4 trades/day, stop after 3 wins or 3 losses in a row; square-off 15:15; ATM option,
   nearest Tuesday expiry (0-DTE toggle OFF → next week on expiry day). Dashboard settings in README.
-- **11_ravi_v1/** NIFTY ORB, 5m, Angel One data (option VWAP needs volume; expired contracts not
-  served → only days whose expiry is live). Ranges = 09:20/10:00/…/15:00 candles; NIFTY close
-  beyond → ATM (nearest 50) CE/PE; while still beyond: morning option > VWAP + NIFTY vs 9 EMA +
-  option > 9 EMA + option ADX ≥ 20; from 13:00 no VWAP, option > 9 EMA (or 20). Entry next open
-  until 15:15; SL ₹20, trail ₹10 per ₹10 at once, target ₹40 OFF, exit on option close < 7 EMA
-  (next open), square-off 15:20; one at a time, 2 per range, same side needs a fresh break;
-  daily locks OFF; expiry day → next week.
-- **11_ravi_v2/** (client's "Final Rule Card", supersedes v1 rules) windows 09:20/10:00/11:00/12:00/
+- **11_ravi_v2/** NIFTY ORB, 5m, Angel One data (expired contracts not served → only days whose
+  expiry is live). Client's "Final Rule Card" (v1 = earlier spec, in git history): windows 09:20/10:00/11:00/12:00/
   13:00/14:00/14:55+15:00; NIFTY 5m close beyond → ATM CE/PE (nearest 50, nearest weekly incl.
   expiry day); premium > VWAP (windows 1–4) + > EMA 20 + ADX(14) ≥ 20, no NIFTY EMA; next open,
   entries ≤ 15:15; max 1 CE + 1 PE per window, opposite signal = reversal; SL 20, target 50, trail
