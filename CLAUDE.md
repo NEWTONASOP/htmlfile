@@ -155,3 +155,8 @@ client reads their chart, then answer questions about the trades.
   until 15:15; SL ₹20, trail ₹10 per ₹10 at once, target ₹40 OFF, exit on option close < 7 EMA
   (next open), square-off 15:20; one at a time, 2 per range, same side needs a fresh break;
   daily locks OFF; expiry day → next week.
+- **11_ravi_v2/** (client's "Final Rule Card", supersedes v1 rules) windows 09:20/10:00/11:00/12:00/
+  13:00/14:00/14:55+15:00; NIFTY 5m close beyond → ATM CE/PE (nearest 50, nearest weekly incl.
+  expiry day); premium > VWAP (windows 1–4) + > EMA 20 + ADX(14) ≥ 20, no NIFTY EMA; next open,
+  entries ≤ 15:15; max 1 CE + 1 PE per window, opposite signal = reversal; SL 20, target 50, trail
+  from +20 at high − 10; no 7 EMA exit; square-off 15:20; max 6 trades/day, max loss ₹10,000.

@@ -34,7 +34,7 @@ python 11_ravi_v1/verify.py                       # independent check of the las
 
 **Data limit:** Angel One serves candles only for option contracts that have **not expired**.
 A day can be tested only when the expiry it trades is still live (e.g. on 27 Nov 2026:
-25 Nov expiry day → 1 Dec contracts, 26–27 Nov → 1 Dec contracts). Earlier days are skipped
+25–27 Nov → 1 Dec contracts; 24 Nov and earlier traded the expired 24 Nov contracts). Earlier days are skipped
 and listed in `summary.txt`. A broker API that keeps expired contracts (ICICI Breeze) is
 needed for a longer backtest.
 
