@@ -75,14 +75,12 @@ TradingView Pine source where one was provided.
   README.md
   strategy.py
   data.py
-  chart.py
   verify.py
   indicators/  moving_averages.py  supertrend.py  rsi.py  + sma/ema/supertrend/rsi .pine
 11_ravi_v1/
   README.md
   strategy.py
   data.py      (Angel One, credentials from env)
-  chart.py
   verify.py
   indicators/  ema.py  vwap.py  adx.py  + ema/vwap/adx .pine
 ```

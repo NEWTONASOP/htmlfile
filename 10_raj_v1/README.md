@@ -12,10 +12,9 @@ ATM NIFTY option (CE or PE). Yahoo has no option prices, so P&L is in **NIFTY in
 | `indicators/moving_averages.py` | SMA (`ta.sma`) and EMA (`ta.ema`, SMA-seeded) on close; type and period per line |
 | `indicators/supertrend.py` | Supertrend (TradingView built-in / `ta.supertrend`, hl2, ATR = RMA) |
 | `indicators/rsi.py` | RSI (`ta.rsi`, Wilder RMA), bullish > 60, bearish < 45 |
-| `chart.py` | Interactive HTML chart: candles, SMA, EMA, Supertrend, RSI, crossover candles, entry, SL, target, trailing SL, exits |
 | `data.py` | Data loader: yfinance 2m/5m or CSV, IST, 09:15–15:15 candles |
 | `verify.py` | Independent check: indicators recomputed separately, setups rebuilt, every trade checked against the rules |
-| `results/<2m|5m>/` | `trades.csv`, `signals.csv` (every candle with all 3 conditions and what happened), `summary.txt`, `bars_with_indicators.csv`, `chart.html` |
+| `results/<2m|5m>/` | `trades.csv`, `signals.csv` (every candle with all 3 conditions and what happened), `summary.txt`, `bars_with_indicators.csv` |
 
 The official TradingView Pine sources of the four built-ins are saved next to the ports
 (`indicators/sma.pine`, `ema.pine`, `supertrend.pine`, `rsi.pine`, fetched from TradingView's
@@ -83,7 +82,7 @@ The backtest implements every setting below; the dashboard has to expose them:
 | 0-day expiry toggle | OFF | `--zero-dte` |
 
 Chart drawing required on the dashboard: SMA, EMA, Supertrend and RSI; mark the crossover
-candle, entry, SL, target and trailing SL (`chart.py` draws all of these). The 50% booking
+candle, entry, SL, target and trailing SL. The 50% booking
 needs an **even number of lots** in live trading (1 lot cannot be split); the backtest books
 exactly half.
 

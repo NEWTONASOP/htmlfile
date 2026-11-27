@@ -287,12 +287,6 @@ def run_timeframe(minutes: int, a) -> None:
     view.to_csv(os.path.join(out, "bars_with_indicators.csv"))
     with open(os.path.join(out, "summary.txt"), "w") as f:
         f.write(title + "\n\n" + "\n".join(lines) + "\n" + sig_line + "\n")
-    try:
-        from chart import make_chart
-        make_chart(view, trades, title, os.path.join(out, "chart.html"),
-                   (f"{a.ma1[0].upper()} {a.ma1[1]}", f"{a.ma2[0].upper()} {a.ma2[1]}"))
-    except ImportError:
-        pass
 
     print(title)
     show = tl if not a.day or tl.empty else tl[tl.entry_time.str[:10] == a.day]

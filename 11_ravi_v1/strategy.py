@@ -341,11 +341,6 @@ def main():
         print(show[["day", "range", "side", "option", "signal", "entry_time", "entry", "exit_time", "exit",
                     "reason", "pnl_pts", "pnl_rs"]].to_string(index=False))
     print("\n" + "\n".join(lines))
-    try:
-        from chart import make_chart
-        make_chart(nifty, opts, trades, tested, os.path.join(a.out, "chart.html"))
-    except ImportError:
-        pass
 
 
 if __name__ == "__main__":

@@ -39,6 +39,8 @@ client reads their chart, then answer questions about the trades.
     results/         output (gitignored)
   ```
   Add the strategy to the root `README.md` table and folder tree.
+- **No chart code** (no `chart.py` / HTML charts) in strategy folders: charts and chart markings
+  are the dashboard's job. List the required markings in the README as dashboard requirements.
 - Port Pine faithfully: same order of operations per bar, `ta.ema` SMA-seeded, `ta.atr` = RMA,
   `ta.pivothigh/low` confirm `right` bars later, `na` comparisons are false, `var` state.
 - After the user confirms a choice, **implement that only. Do not keep alternative options

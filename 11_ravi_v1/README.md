@@ -13,10 +13,9 @@ options (option volume is needed for VWAP; Yahoo has no option data).
 | `indicators/ema.py` + `ema.pine` | EMA (`ta.ema`): NIFTY 9, premium 9 / 20, exit 7 |
 | `indicators/vwap.py` + `vwap.pine` | VWAP, anchor Session, source hlc3 (TradingView built-in) |
 | `indicators/adx.py` + `adx.pine` | ADX, smoothing 14, DI length 14 (TradingView built-in) |
-| `chart.py` | HTML chart: NIFTY with all 7 ranges, 9 EMA, breakouts; option premium with entry, SL, trailing SL, target, exit |
 | `verify.py` | Independent check: indicators recomputed with pandas, every trade re-checked and its exit re-simulated |
 | `data/` | Downloaded candles (gitignored) |
-| `results/` | `trades.csv`, `checks.csv` (every breakout close checked and why it did / did not enter), `summary.txt`, `chart.html` |
+| `results/` | `trades.csv`, `checks.csv` (every breakout close checked and why it did / did not enter), `summary.txt` |
 
 The `.pine` files are TradingView's official sources (`STD;EMA`, `STD;VWAP`,
 `STD;Average Directional Index`); the Python ports follow them.
@@ -68,7 +67,7 @@ needed for a longer backtest.
 
 ADX threshold (20), afternoon premium EMA (9/20), target ON/OFF (OFF), trades per range (1/2),
 EMA disable switch (gap days), expiry (current/next), lots, daily trade / loss / profit locks.
-Chart markings: all 7 ranges, breakout, CE/PE entry, SL, target and trailing SL (`chart.py`).
+Chart markings (dashboard): all 7 ranges, breakout, CE/PE entry, SL, target and trailing SL.
 
 ## Verification
 
