@@ -17,7 +17,8 @@ Reversal   : an opposite-side signal while in a trade closes it and opens the ne
              same next open (counts as the window's second trade). A same-side signal while
              already in that side is ignored. An open trade carries across windows.
 Exits      : SL Rs 20 below entry; target Rs 50 above entry; trailing SL starts once the premium
-             is +Rs 20 (high), then SL = highest premium - Rs 10, only up; square-off 15:20.
+             is +Rs 20 (high), then SL = highest premium - Rs 10, only up; 7 EMA exit: option 5m
+             candle closes below its EMA 7 -> exit at the next open; square-off 15:20.
              Candle high/low, SL first, then target; fills at the level or the open if beyond.
 Daily      : max trades/day 6, max daily loss Rs 10,000 (realised; no new trades once hit).
 
@@ -66,6 +67,7 @@ TRAIL_GAP = 10.0
 EMA_LEN = 20
 ADX_LEN = 14
 ADX_MIN = 20.0
+EXIT_EMA = 7
 
 
 def atm(spot: float) -> int:
@@ -93,6 +95,7 @@ def prepare(a):
             continue
         o["vwap"] = vwap(o)
         o["ema"] = ema(o, a.ema)
+        o["ema7"] = ema(o, EXIT_EMA)
         o["adx"] = adx(o, a.adx_len, a.adx_len)
         opts[f.stem[4:]] = o
     return nifty, contracts, opts
@@ -112,6 +115,7 @@ class Trade:
     sl: float
     target: float
     best: float
+    exit_flag: bool = False          # closed below EMA 7 -> exit at the next open
     exit_time: pd.Timestamp | None = None
     exit: float | None = None
     reason: str = ""
@@ -167,7 +171,9 @@ def run_day(day, nb, opts, contracts, exp, a, checks):
             o = opts[pos.symbol]
             if ts in o.index:
                 ob = o.loc[ts]
-                if ob.Low <= pos.sl:
+                if pos.exit_flag:
+                    close(ts, ob.Open, "7 EMA exit")
+                elif ob.Low <= pos.sl:
                     close(ts, min(ob.Open, pos.sl), "StopLoss" if pos.sl <= pos.entry - a.sl + 1e-9 else "Trailing SL")
                 elif ob.High >= pos.target:
                     close(ts, max(ob.Open, pos.target), "Target")
@@ -180,6 +186,8 @@ def run_day(day, nb, opts, contracts, exp, a, checks):
                             pos.sl_path.append((ts, pos.sl))
                     if end >= a.square_off or last:
                         close(ts, ob.Close, "Square-off")
+                    elif ob.Close < ob.ema7:
+                        pos.exit_flag = True
             elif end >= a.square_off or last:
                 close(ts, float(o.loc[:ts].Close.iloc[-1]), "Square-off")
         if end > a.square_off:

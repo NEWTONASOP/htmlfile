@@ -5,7 +5,8 @@
    ADX 14/14 (ewm alpha 1/14). Compared after 300 candles of warm-up.
 2. Every trade re-checked: window range recomputed (14:55 window = 14:55 + 15:00 candles), signal
    close beyond it, ATM strike, VWAP (windows 1-4) / EMA 20 / ADX >= 20 on the option, entry =
-   next option open, exit re-simulated (SL 20, target 50, trail after +20 at high - 10, 15:20, or
+   next option open, exit re-simulated (SL 20, target 50, trail after +20 at high - 10, close below
+   EMA 7 -> next open, 15:20, or
    reversal at the next trade's entry), max 1 CE + 1 PE per window, max 6 trades a day.
 
 Usage: python 11_ravi_v2/verify.py
@@ -29,6 +30,7 @@ WIN = {"09:20": ["09:20"], "10:00": ["10:00"], "11:00": ["11:00"], "12:00": ["12
 def ind(o):
     o = o.copy()
     o["e20"] = o.Close.ewm(span=20, adjust=False).mean()
+    o["e7"] = o.Close.ewm(span=7, adjust=False).mean()
     hlc3 = (o.High + o.Low + o.Close) / 3
     g = o.index.date
     o["vw"] = (hlc3 * o.Volume).groupby(g).cumsum() / o.Volume.groupby(g).cumsum()
@@ -77,9 +79,11 @@ def main():
             if not (nxt.day == t.day and nxt.entry_time == t.exit_time and nxt.side != t.side):
                 errs.append(f"{t.day} {t.signal} reversal not followed by the opposite entry")
             continue
-        sl, best, ex = t.entry - 20, t.entry, None
+        sl, best, ex, flag = t.entry - 20, t.entry, None, False
         for bt in o.loc[ent:].index:
             b = o.loc[bt]
+            if flag:
+                ex = (bt, b.Open); break
             if b.Low <= sl:
                 ex = (bt, min(b.Open, sl)); break
             if b.High >= t.entry + 50:
@@ -89,6 +93,8 @@ def main():
                 sl = max(sl, best - 10)
             if (bt + BAR).time() >= time(15, 20):
                 ex = (bt, b.Close); break
+            if b.Close < b.e7:
+                flag = True
         if ex is None or ex[0].strftime("%H:%M") != t.exit_time or abs(ex[1] - t.exit) > 1e-6:
             errs.append(f"{t.day} {t.signal} exit {ex} vs {t.exit_time} {t.exit}")
     g = tl.groupby(["day", "window", "side"]).size()

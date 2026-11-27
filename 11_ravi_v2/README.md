@@ -6,8 +6,9 @@ SmartAPI** (option volume is needed for VWAP; Yahoo has no option data).
 
 Changes from v1 (`11_ravi_v1/`), all from the client's "Final Rule Card": EMA 20 instead of 9,
 no NIFTY EMA check, last window = 14:55 + 15:00 candles, max 1 CE + 1 PE per window with
-reversal on an opposite signal, target ₹50 ON, trailing from +₹20 at high − ₹10, no 7 EMA
-exit, nearest weekly expiry (also on expiry day), daily limits 6 trades / ₹10,000 loss.
+reversal on an opposite signal, target ₹50 ON, trailing from +₹20 at high − ₹10, nearest weekly
+expiry (also on expiry day), daily limits 6 trades / ₹10,000 loss. Added by the client after the
+card: **7 EMA exit** (option premium closes below its EMA 7).
 
 ## Folder
 
@@ -15,7 +16,7 @@ exit, nearest weekly expiry (also on expiry day), daily limits 6 trades / ₹10,
 |---|---|
 | `strategy.py` | Backtest: windows, breakouts, premium filters, entries / reversals, SL / target / trailing, daily limits, report |
 | `data.py` | Angel One login (env variables), contract list (scrip master), 5m candle download and cache |
-| `indicators/ema.py` + `ema.pine` | EMA (`ta.ema`), period 20 |
+| `indicators/ema.py` + `ema.pine` | EMA (`ta.ema`): 20 (filter) and 7 (exit) |
 | `indicators/vwap.py` + `vwap.pine` | VWAP, anchor Session, source hlc3 (TradingView built-in) |
 | `indicators/adx.py` + `adx.pine` | ADX 14 / 14 (TradingView built-in "Average directional index") |
 | `verify.py` | Independent check: indicators recomputed with pandas, every trade re-checked, exits re-simulated |
@@ -51,11 +52,12 @@ backtest needs a broker API that keeps expired contracts (e.g. ICICI Breeze).
 | Entry | All conditions true at a 5m close → **next 5m candle open** of the option. No entries after **15:15** |
 | Per window | Max 2 trades: **at most 1 CE and 1 PE**; no same-side re-entry in the same window |
 | Reversal | An opposite-side signal while in a trade closes it and opens the new side at the same next open (counts as the window's second trade). A same-side signal while already in that side is ignored |
-| Holding | An open trade carries across windows until SL, target, trailing SL, reversal or square-off. One trade at a time |
+| Holding | An open trade carries across windows until SL, target, trailing SL, 7 EMA exit, reversal or square-off. One trade at a time |
 | Stop loss | **₹20** below the entry premium |
 | Target | **₹50** above the entry premium |
 | Trailing SL | Starts once the premium's high is **+₹20** over entry; then SL = **highest premium − ₹10**, only moves up (at +₹20 the SL is entry + ₹10) |
-| Order on a candle | SL first, then target (candle low/high; fill at the level, or the open if it opens beyond), then the trail moves on the candle's high |
+| 7 EMA exit | Option premium 5m candle **closes below its EMA 7** → exit at the **next candle open** (checked from the entry candle on) |
+| Order on a candle | 7 EMA exit from the previous close (at the open), then SL, then target (candle low/high; fill at the level, or the open if it opens beyond), then the trail moves on the candle's high, then the 7 EMA check on the close |
 | Square-off | **15:20** (close of the 15:15 candle) |
 | Daily limits | Max **6 trades/day** (reversal entries count), max daily loss **₹10,000** (closed trades): no new trades once hit |
 | Quantity | Lot 65 × lots (default 1). P&L = (exit − entry) premium × quantity, no costs |
@@ -79,13 +81,15 @@ Chart markings (dashboard): all 7 windows' ranges, breakout, CE/PE entry, SL, ta
 
 ## Verification
 
-- Synthetic data (6 random runs, incl. 10 reversals): one trade at a time, reversal exit = next
+- Synthetic data (6 random runs, incl. reversals and 7 EMA exits): one trade at a time, reversal exit = next
   entry on the other side, max 1 CE + 1 PE per window, ≤ 6 trades/day, entries ≤ 15:15 at the
   next open on the ATM strike, exits ≤ 15:20; window ranges recomputed separately; every exit
-  equal to a separate re-simulation of SL / target / trailing / square-off.
+  equal to a separate re-simulation of SL / target / trailing / 7 EMA / square-off.
 - `verify.py` on Angel One data (25–27 Nov 2026): EMA 20, VWAP, ADX recomputed with pandas
   (max difference 0.000001); all 14 trades pass the rule re-check.
 - Hand check 26 Nov, 14:00 window (high 25793.20): 14:05–14:25 closes beyond the high but the
   ATM CE was below its EMA 20 (e.g. 179.60 vs 194.11); 14:30 close 25851.30 → 25850 CE 190.65 >
   EMA 20 188.15, ADX 26.2 → entry 14:35 at 190.60, SL 170.60, target 240.60; 14:40 high 230.15
   (+39.55) → trail SL 220.15; 14:45 high 246 → target 240.60 (+50).
+- Hand check 7 EMA exit, 27 Nov 12:00 window: 25700 PE signal 12:05 (160.95 > EMA 20 153.02,
+  ADX 29.4) → entry 12:10 at 161.35; 12:10 close 159.25 < EMA 7 161.37 → exit 12:15 open 159.25.

@@ -159,4 +159,5 @@ client reads their chart, then answer questions about the trades.
   13:00/14:00/14:55+15:00; NIFTY 5m close beyond → ATM CE/PE (nearest 50, nearest weekly incl.
   expiry day); premium > VWAP (windows 1–4) + > EMA 20 + ADX(14) ≥ 20, no NIFTY EMA; next open,
   entries ≤ 15:15; max 1 CE + 1 PE per window, opposite signal = reversal; SL 20, target 50, trail
-  from +20 at high − 10; no 7 EMA exit; square-off 15:20; max 6 trades/day, max loss ₹10,000.
+  from +20 at high − 10; 7 EMA exit (premium close < EMA 7 → next open, client added after
+  the card); square-off 15:20; max 6 trades/day, max loss ₹10,000.
