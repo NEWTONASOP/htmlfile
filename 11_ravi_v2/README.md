@@ -55,7 +55,7 @@ backtest needs a broker API that keeps expired contracts (e.g. ICICI Breeze).
 | Holding | An open trade carries across windows until SL, target, trailing SL, 7 EMA exit, reversal or square-off. One trade at a time |
 | Stop loss | **₹20** below the entry premium |
 | Target | **₹50** above the entry premium |
-| Trailing SL | Starts once the premium's high is **+₹20** over entry; then SL = **highest premium − ₹10**, only moves up (at +₹20 the SL is entry + ₹10) |
+| Trailing SL | Starts once the premium's high is **+₹20** over entry; then SL = **highest premium − ₹10**, only moves up (at +₹20 the SL is entry + ₹10). If a candle raises the SL and then **closes below it**, the price fell through it after the high: exit at the SL in that candle |
 | 7 EMA exit | Option premium 5m candle **closes below its EMA 7** → exit at the **next candle open** (checked from the entry candle on) |
 | Order on a candle | 7 EMA exit from the previous close (at the open), then SL, then target (candle low/high; fill at the level, or the open if it opens beyond), then the trail moves on the candle's high, then the 7 EMA check on the close |
 | Square-off | **15:20** (close of the 15:15 candle) |

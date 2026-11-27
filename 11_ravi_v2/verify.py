@@ -91,6 +91,8 @@ def main():
             best = max(best, b.High)
             if best - t.entry >= 20:
                 sl = max(sl, best - 10)
+            if b.Close <= sl:
+                ex = (bt, sl); break
             if (bt + BAR).time() >= time(15, 20):
                 ex = (bt, b.Close); break
             if b.Close < b.e7:

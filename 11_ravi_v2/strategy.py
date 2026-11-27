@@ -17,7 +17,8 @@ Reversal   : an opposite-side signal while in a trade closes it and opens the ne
              same next open (counts as the window's second trade). A same-side signal while
              already in that side is ignored. An open trade carries across windows.
 Exits      : SL Rs 20 below entry; target Rs 50 above entry; trailing SL starts once the premium
-             is +Rs 20 (high), then SL = highest premium - Rs 10, only up; 7 EMA exit: option 5m
+             is +Rs 20 (high), then SL = highest premium - Rs 10, only up (a candle that raises it
+             and then closes below it exits at the SL in that candle); 7 EMA exit: option 5m
              candle closes below its EMA 7 -> exit at the next open; square-off 15:20.
              Candle high/low, SL first, then target; fills at the level or the open if beyond.
 Daily      : max trades/day 6, max daily loss Rs 10,000 (realised; no new trades once hit).
@@ -184,7 +185,9 @@ def run_day(day, nb, opts, contracts, exp, a, checks):
                         if new_sl > pos.sl:
                             pos.sl = new_sl
                             pos.sl_path.append((ts, pos.sl))
-                    if end >= a.square_off or last:
+                    if ob.Close <= pos.sl:                        # fell through the raised SL after the high
+                        close(ts, pos.sl, "Trailing SL")
+                    elif end >= a.square_off or last:
                         close(ts, ob.Close, "Square-off")
                     elif ob.Close < ob.ema7:
                         pos.exit_flag = True
